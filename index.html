@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VITA — Каталог и заказы</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial;background:#f8f7fb;color:#303040}
+header{background:linear-gradient(120deg,#e7c8dc,#c4dcf5);padding:25px;text-align:center}
+h1{margin:0;font-size:38px;color:#645578;letter-spacing:4px}
+header p{margin:6px}
+main{max-width:1000px;margin:auto;padding:15px}
+input{width:100%;padding:13px;margin:7px 0;border:1px solid #ddd;border-radius:12px;font-size:16px}
+.products{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.card,.cart{background:white;border-radius:17px;padding:17px;box-shadow:0 3px 12px #0001}
+.card h3{margin:5px 0}
+.price{font-size:23px;color:#b16d99;font-weight:bold}
+.small{color:#777;font-size:14px}
+button{border:0;border-radius:10px;padding:11px 15px;cursor:pointer;font-size:16px}
+.add,.send{background:#b47ca6;color:white}
+.controls{display:flex;align-items:center;gap:15px}
+.controls button{background:#e9d9e8}
+.cart{margin-top:25px}
+.cartline{padding:10px 0;border-bottom:1px solid #eee}
+.send{width:100%;margin-top:12px}
+</style>
+</head>
+<body>
+<header>
+<h1>VITA</h1>
+<p>Каталог и заказы</p>
+</header>
+<main>
+<input id="search" placeholder="Поиск товара или кода" oninput="render()">
+<h2>Наши товары</h2>
+<div class="products" id="products"></div>
+<div class="cart">
+<h2>🛒 Корзина</h2>
+<div id="cartItems"></div>
+<h3 id="total">Итого: 0 сомони</h3>
+<input id="shop" placeholder="Название магазина">
+<input id="phone" placeholder="Телефон магазина">
+<input id="comment" placeholder="Комментарий">
+<button class="send" onclick="sendOrder()">Отправить заказ в WhatsApp</button>
+</div>
+</main>
+<script>
+const products=[
+{id:"042",name:"Fairy 450 мл",price:11.5,pack:12},
+{id:"001",name:"Domestos 750 мл",price:19,pack:16},
+{id:"003",name:"Azelit 600 мл",price:18.5,pack:8},
+{id:"007",name:"Ариэль 3 кг",price:65,pack:6},
+{id:"009",name:"Миф 2 кг",price:37,pack:8},
+{id:"008",name:"Персил 3 кг",price:65,pack:6}
+];
+const cart={};
+function money(n){return n.toFixed(2)+" сомони"}
+function render(){
+let q=document.getElementById("search").value.toLowerCase();
+document.getElementById("products").innerHTML=products.filter(p=>p.name.toLowerCase().includes(q)||p.id.includes(q)).map(p=>
+<div class="card">
+<h3>${p.name}</h3>
+<p class="small">Код: ${p.id}</p>
+<p class="small">В коробке: ${p.pack} шт.</p>
+<p class="price">${money(p.price)}</p>
+<div class="controls">
+<button onclick="change('${p.id}',-1)">−</button>
+<strong>${cart[p.id]||0}</strong>
+<button onclick="change('${p.id}',1)">+</button>
+</div>
+</div>).join("");
+let total=0;
+document.getElementById("cartItems").innerHTML=products.filter(p=>cart[p.id]>0).map(p=>{
+let sum=p.price*cart[p.id];total+=sum;
+return <div class="cartline">${p.name} — ${cart[p.id]} шт. × ${money(p.price)} = ${money(sum)}</div>;
+}).join("")||"Корзина пуста";
+document.getElementById("total").textContent="Итого: "+money(total);
+}
+function change(id,n){cart[id]=Math.max(0,(cart[id]||0)+n);render()}
+function sendOrder(){
+let selected=products.filter(p=>cart[p.id]>0);
+if(!selected.length){alert("Добавьте товары");return}
+let shop=document.getElementById("shop").value.trim();
+let phone=document.getElementById("phone").value.trim();
+if(!shop||!phone){alert("Введите магазин и телефон");return}
+let total=0;
+let msg="ЗАКАЗ VITA\nМагазин: "+shop+"\nТелефон: "+phone+"\n\n";
+selected.forEach(p=>{
+let sum=p.price*cart[p.id];total+=sum;
+msg+=p.name+" (код "+p.id+") — "+cart[p.id]+" шт. × "+money(p.price)+" = "+money(sum)+"\n";
+});
+msg+="\nИТОГО: "+money(total);
+msg+="\nКомментарий: "+document.getElementById("comment").value;
+window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank");
+}
+render();
+</script>
+</body>
+</html>

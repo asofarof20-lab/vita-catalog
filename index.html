@@ -1,20 +1,19 @@
-productArea.innerHTML = '<p class="small">Товары не найдены.</p>';
-  } else {
-    productArea.innerHTML = filtered.map(function(product) {
+} else {
+    productArea.innerHTML = filtered.map(function(p) {
       return 
         <article class="card">
           <div class="photo">
             <span>📦</span>
             Фото скоро
           </div>
-          <h3>${product.name}</h3>
-          <p class="small">Код: ${product.id}</p>
-          <p class="small">В коробке: ${product.pack} шт.</p>
-          <p class="price">${money(product.price)}</p>
+          <h3>${p.name}</h3>
+          <p class="small">Код: ${p.id}</p>
+          <p class="small">В коробке: ${p.pack} шт.</p>
+          <p class="price">${money(p.price)}</p>
           <div class="controls">
-            <button type="button" data-id="${product.id}" data-change="-1">−</button>
-            <strong>${cart[product.id] || 0}</strong>
-            <button type="button" data-id="${product.id}" data-change="1">+</button>
+            <button type="button" data-id="${p.id}" data-delta="-1">−</button>
+            <strong>${cart[p.id] || 0}</strong>
+            <button type="button" data-id="${p.id}" data-delta="1">+</button>
           </div>
         </article>
       ;
@@ -22,8 +21,8 @@ productArea.innerHTML = '<p class="small">Товары не найдены.</p>'
   }
 
   let total = 0;
-  const selected = products.filter(function(product) {
-    return (cart[product.id] || 0) > 0;
+  const selected = products.filter(function(p) {
+    return (cart[p.id] || 0) > 0;
   });
 
   const cartArea = document.getElementById("cartItems");
@@ -31,16 +30,15 @@ productArea.innerHTML = '<p class="small">Товары не найдены.</p>'
   if (selected.length === 0) {
     cartArea.innerHTML = '<p class="small">Корзина пока пуста.</p>';
   } else {
-    cartArea.innerHTML = selected.map(function(product) {
-      const sum = product.price * cart[product.id];
+    cartArea.innerHTML = selected.map(function(p) {
+      const sum = p.price * cart[p.id];
       total += sum;
 
       return 
         <div class="cartline">
-          <strong>${product.name}</strong><br>
-          Код: ${product.id}<br>
-          ${cart[product.id]} шт. × ${money(product.price)}
-          = <strong>${money(sum)}</strong>
+          <strong>${p.name}</strong><br>
+          Код: ${p.id}<br>
+          ${cart[p.id]} шт. × ${money(p.price)} = ${money(sum)}
         </div>
       ;
     }).join("");
@@ -49,8 +47,8 @@ productArea.innerHTML = '<p class="small">Товары не найдены.</p>'
   document.getElementById("total").textContent = "Итого: " + money(total);
 }
 
-function change(id, amount) {
-  cart[id] = Math.max(0, (cart[id] || 0) + amount);
+function change(id, delta) {
+  cart[id] = Math.max(0, (cart[id] || 0) + delta);
   render();
 }
 
@@ -60,12 +58,12 @@ document.getElementById("products").addEventListener("click", function(event) {
   const button = event.target.closest("button[data-id]");
   if (!button) return;
 
-  change(button.dataset.id, Number(button.dataset.change));
+  change(button.dataset.id, Number(button.dataset.delta));
 });
 
 function sendOrder() {
-  const selected = products.filter(function(product) {
-    return (cart[product.id] || 0) > 0;
+  const selected = products.filter(function(p) {
+    return (cart[p.id] || 0) > 0;
   });
 
   if (selected.length === 0) {
@@ -87,11 +85,11 @@ function sendOrder() {
   message += "Магазин: " + shop + "\n";
   message += "Телефон: " + phone + "\n\n";
 
-  selected.forEach(function(product) {
-    const sum = product.price * cart[product.id];
+  selected.forEach(function(p) {
+    const sum = p.price * cart[p.id];
     total += sum;
-    message += product.name + " (код " + product.id + ")\n";
-    message += cart[product.id] + " шт. × " + money(product.price);
+    message += p.name + " (код " + p.id + ")\n";
+    message += cart[p.id] + " шт. × " + money(p.price);
     message += " = " + money(sum) + "\n\n";
   });
 
@@ -104,7 +102,7 @@ function sendOrder() {
   const url = "https://wa.me/" + WHATSAPP_NUMBER +
     "?text=" + encodeURIComponent(message);
 
-  window.open(url, "_blank", "noopener");
+  window.open(url, "_blank");
 }
 
 document.getElementById("sendButton").addEventListener("click", sendOrder);

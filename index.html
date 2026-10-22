@@ -1,49 +1,74 @@
-<p class="small">Код: ${p.id}</p>
-          <p class="small">В коробке: ${p.pack} шт.</p>
-          <p class="price">${money(p.price)}</p>
+productArea.innerHTML = '<p class="small">Товары не найдены.</p>';
+  } else {
+    productArea.innerHTML = filtered.map(function(product) {
+      return 
+        <article class="card">
+          <div class="photo">
+            <span>📦</span>
+            Фото скоро
+          </div>
+          <h3>${product.name}</h3>
+          <p class="small">Код: ${product.id}</p>
+          <p class="small">В коробке: ${product.pack} шт.</p>
+          <p class="price">${money(product.price)}</p>
           <div class="controls">
-            <button onclick="change('${p.id}', -1)" aria-label="Уменьшить">−</button>
-            <strong>${cart[p.id] || 0}</strong>
-            <button onclick="change('${p.id}', 1)" aria-label="Добавить">+</button>
+            <button type="button" data-id="${product.id}" data-change="-1">−</button>
+            <strong>${cart[product.id] || 0}</strong>
+            <button type="button" data-id="${product.id}" data-change="1">+</button>
           </div>
         </article>
       ;
     }).join("");
+  }
 
   let total = 0;
-  const selected = products.filter(function(p) {
-    return (cart[p.id] || 0) > 0;
+  const selected = products.filter(function(product) {
+    return (cart[product.id] || 0) > 0;
   });
 
-  document.getElementById("cartItems").innerHTML =
-    selected.length
-      ? selected.map(function(p) {
-          const sum = p.price * cart[p.id];
-          total += sum;
-          return 
-            <div class="cartline">
-              ${p.name} (код ${p.id}) — ${cart[p.id]} шт.
-              × ${money(p.price)} = ${money(sum)}
-            </div>
-          `;
-        }).join("")
-      : '<p class="empty">Корзина пока пуста.</p>';
+  const cartArea = document.getElementById("cartItems");
 
-  document.getElementById("total").textContent =
-    "Итого: " + money(total);
+  if (selected.length === 0) {
+    cartArea.innerHTML = '<p class="small">Корзина пока пуста.</p>';
+  } else {
+    cartArea.innerHTML = selected.map(function(product) {
+      const sum = product.price * cart[product.id];
+      total += sum;
+
+      return 
+        <div class="cartline">
+          <strong>${product.name}</strong><br>
+          Код: ${product.id}<br>
+          ${cart[product.id]} шт. × ${money(product.price)}
+          = <strong>${money(sum)}</strong>
+        </div>
+      ;
+    }).join("");
+  }
+
+  document.getElementById("total").textContent = "Итого: " + money(total);
 }
 
-function change(id, n) {
-  cart[id] = Math.max(0, (cart[id] || 0) + n);
+function change(id, amount) {
+  cart[id] = Math.max(0, (cart[id] || 0) + amount);
   render();
 }
 
+document.getElementById("search").addEventListener("input", render);
+
+document.getElementById("products").addEventListener("click", function(event) {
+  const button = event.target.closest("button[data-id]");
+  if (!button) return;
+
+  change(button.dataset.id, Number(button.dataset.change));
+});
+
 function sendOrder() {
-  const selected = products.filter(function(p) {
-    return (cart[p.id] || 0) > 0;
+  const selected = products.filter(function(product) {
+    return (cart[product.id] || 0) > 0;
   });
 
-  if (!selected.length) {
+  if (selected.length === 0) {
     alert("Сначала добавьте товары в корзину.");
     return;
   }
@@ -58,26 +83,31 @@ function sendOrder() {
   }
 
   let total = 0;
-  let msg = "ЗАКАЗ VITA\n";
-  msg += "Магазин: " + shop + "\n";
-  msg += "Телефон: " + phone + "\n\n";
+  let message = "ЗАКАЗ VITA\n";
+  message += "Магазин: " + shop + "\n";
+  message += "Телефон: " + phone + "\n\n";
 
-  selected.forEach(function(p) {
-    const sum = p.price * cart[p.id];
+  selected.forEach(function(product) {
+    const sum = product.price * cart[product.id];
     total += sum;
-    msg += p.name + " (код " + p.id + ") — " +
-      cart[p.id] + " шт. × " + money(p.price) +
-      " = " + money(sum) + "\n";
+    message += product.name + " (код " + product.id + ")\n";
+    message += cart[product.id] + " шт. × " + money(product.price);
+    message += " = " + money(sum) + "\n\n";
   });
 
-  msg += "\nИТОГО: " + money(total);
-  msg += "\nКомментарий: " + (comment || "нет");
+  message += "ИТОГО: " + money(total);
 
-  const url = "https://wa.me/992919290585?text=" +
-    encodeURIComponent(msg);
+  if (comment) {
+    message += "\nКомментарий: " + comment;
+  }
 
-  window.open(url, "_blank");
+  const url = "https://wa.me/" + WHATSAPP_NUMBER +
+    "?text=" + encodeURIComponent(message);
+
+  window.open(url, "_blank", "noopener");
 }
+
+document.getElementById("sendButton").addEventListener("click", sendOrder);
 
 render();
 </script>

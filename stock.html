@@ -1,0 +1,23 @@
+<section class="panel hidden" id="stockPanel">
+  <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">
+    <div>
+      <h2 style="margin:0 0 6px">Товары</h2>
+      <div id="count" class="status">Загрузка...</div>
+    </div>
+    <button id="logoutButton" type="button">Выйти</button>
+  </div>
+  <p class="status">Измени количество и нажми «Сохранить» у нужного товара.</p>
+  <input class="search" id="search" placeholder="Поиск по названию, ID или категории">
+  <p id="message" class="status" aria-live="polite"></p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th><th>Товар</th><th>Вариант</th>
+          <th>Цена</th><th>Остаток</th><th>Действие</th>
+        </tr>
+      </thead>
+      <tbody id="products"></tbody>
+    </table>
+  </div>
+</section>

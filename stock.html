@@ -1,23 +1,115 @@
-<section class="panel hidden" id="stockPanel">
-  <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">
-    <div>
-      <h2 style="margin:0 0 6px">Товары</h2>
-      <div id="count" class="status">Загрузка...</div>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VITA — Склад</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<style>
+body{font-family:Arial,sans-serif;margin:20px;background:#f4f5f7;color:#222}
+h1{font-size:24px}
+input,button{padding:11px;margin:5px 0;border:1px solid #ccc;border-radius:7px}
+button{background:#222;color:white;cursor:pointer}
+#login,#app{max-width:700px;margin:auto}
+.item{background:white;padding:14px;margin:10px 0;border-radius:9px}
+.item input{width:75px}
+.small{color:#666;font-size:13px}
+</style>
+</head>
+<body>
+<div id="login">
+<h1>VITA — Вход</h1>
+<input id="email" type="email" placeholder="Email"><br>
+<input id="password" type="password" placeholder="Пароль"><br>
+<button onclick="signIn()">Войти</button>
+<p id="message"></p>
+</div>
+
+<div id="app" hidden>
+<h1>VITA — Склад</h1>
+<button onclick="loadProducts()">Обновить</button>
+<button onclick="signOut()">Выйти</button>
+<input id="search" placeholder="Поиск товара..." oninput="renderProducts()">
+<div id="products"></div>
+</div>
+
+<script>
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let allProducts = [];
+
+async function signIn(){
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const {error} = await db.auth.signInWithPassword({email,password});
+  document.getElementById('message').textContent =
+    error ? error.message : 'Вход выполнен';
+  if(!error) showApp();
+}
+
+async function signOut(){
+  await db.auth.signOut();
+  document.getElementById('app').hidden = true;
+  document.getElementById('login').hidden = false;
+}
+
+async function showApp(){
+  document.getElementById('login').hidden = true;
+  document.getElementById('app').hidden = false;
+  await loadProducts();
+}
+
+async function loadProducts(){
+  const {data,error} = await db.from('products')
+    .select('*').order('name');
+  if(error){alert('Ошибка: '+error.message);return;}
+  allProducts = data || [];
+  renderProducts();
+}
+
+function renderProducts(){
+  const q = document.getElementById('search').value.toLowerCase();
+  const filtered = allProducts.filter(p =>
+    (p.name  '').toLowerCase().includes(q) 
+    (p.id || '').toLowerCase().includes(q)
+  );
+  document.getElementById('products').innerHTML = filtered.map(p => `
+    <div class="item">
+      <b>${escapeHtml(p.name)}</b>
+      <div class="small">Код: ${escapeHtml(p.id)}</div>
+      <div>Остаток: <input type="number" min="0" step="1"
+        id="stock-${escapeAttr(p.id)}" value="${Number(p.stock)||0}"></div>
+      <button onclick="saveStock('${escapeJs(p.id)}')">Сохранить</button>
     </div>
-    <button id="logoutButton" type="button">Выйти</button>
-  </div>
-  <p class="status">Измени количество и нажми «Сохранить» у нужного товара.</p>
-  <input class="search" id="search" placeholder="Поиск по названию, ID или категории">
-  <p id="message" class="status" aria-live="polite"></p>
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th><th>Товар</th><th>Вариант</th>
-          <th>Цена</th><th>Остаток</th><th>Действие</th>
-        </tr>
-      </thead>
-      <tbody id="products"></tbody>
-    </table>
-  </div>
-</section>
+  `).join('');
+}
+
+async function saveStock(id){
+  const field = document.getElementById('stock-'+id);
+  const stock = Number(field.value);
+  if(!Number.isInteger(stock) || stock < 0){
+    alert('Введи целое число от 0');
+    return;
+  }
+  const {error} = await db.from('products')
+    .update({stock,updated_at:new Date().toISOString()})
+    .eq('id',id);
+  if(error){alert('Ошибка: '+error.message);return;}
+  alert('Остаток сохранён');
+  await loadProducts();
+}
+
+function escapeHtml(v){
+  return String(v ?? '').replace(/[&<>"']/g,c=>({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  })[c]);
+}
+function escapeAttr(v){return String(v ?? '').replace(/[^a-zA-Z0-9_-]/g,'_');}
+function escapeJs(v){return String(v ?? '').replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+
+db.auth.getSession().then(({data})=>{
+  if(data.session) showApp();
+});
+</script>
+</body>
+</html>

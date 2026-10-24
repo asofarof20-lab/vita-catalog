@@ -7,12 +7,13 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./supabase.js"></script>
 <style>
-body{font-family:Arial,sans-serif;background:#f3f4f6;margin:0;padding:20px;color:#222}
+body{font-family:Arial,sans-serif;background:#f3f4f6;padding:20px;color:#222}
 main{max-width:700px;margin:auto}
 input,button{box-sizing:border-box;padding:12px;margin:6px 0;border-radius:8px;border:1px solid #ccc;font-size:16px}
-input{width:100%}button{background:#222;color:white;cursor:pointer}
+input{width:100%}
+button{background:#222;color:white;cursor:pointer}
 .item{background:white;padding:14px;margin:12px 0;border-radius:10px}
-.item input{width:110px}
+.item input{width:100px}
 #app{display:none}
 </style>
 </head>
@@ -20,160 +21,141 @@ input{width:100%}button{background:#222;color:white;cursor:pointer}
 <main>
 <section id="login">
 <h2>VITA — Вход</h2>
-<input id="email" type="email" placeholder="Электронная почта">
+<input id="email" type="email" placeholder="Email">
 <input id="password" type="password" placeholder="Пароль">
 <button id="loginBtn">Войти</button>
 <p id="message"></p>
 </section>
-
 <section id="app">
 <h2>VITA — Склад</h2>
-<button id="refreshBtn">Обновить товары</button>
+<button id="refreshBtn">Обновить</button>
 <button id="logoutBtn">Выйти</button>
-<input id="search" placeholder="Поиск по названию или коду">
+<input id="search" placeholder="Поиск товара">
 <div id="products"></div>
 </section>
 </main>
-
 <script>
 const message = document.getElementById('message');
 const login = document.getElementById('login');
 const app = document.getElementById('app');
+let db, products = [];
 
-let db;
-let products = [];
-
-function showError(error) {
-  message.textContent = error.message || String(error);
+function getConfig(){
+  if(typeof SUPABASE_URL !== 'undefined' &&
+     typeof SUPABASE_KEY !== 'undefined'){
+    return {url:SUPABASE_URL,key:SUPABASE_KEY};
+  }
+  if(typeof window.SUPABASE_URL === 'string' &&
+     typeof window.SUPABASE_KEY === 'string'){
+    return {url:window.SUPABASE_URL,key:window.SUPABASE_KEY};
+  }
+  throw new Error('Не найдены URL и ключ в supabase.js');
 }
 
-function openApp() {
-  login.style.display = 'none';
-  app.style.display = 'block';
+function init(){
+  if(!window.supabase) throw new Error('Supabase не загрузился. Проверь интернет.');
+  const c=getConfig();
+  db=window.supabase.createClient(c.url,c.key);
+}
+
+function showApp(){
+  login.style.display='none';
+  app.style.display='block';
   loadProducts();
 }
 
-async function signIn() {
-  message.textContent = 'Выполняется вход...';
-
-  try {
-    if (!window.supabase  !window.SUPABASE_URL  !window.SUPABASE_KEY) {
-      throw new Error('Не удалось загрузить Supabase. Проверь файл supabase.js.');
-    }
-
-    db = window.supabase.createClient(
-      window.SUPABASE_URL,
-      window.SUPABASE_KEY
-    );
-
-    const { error } = await db.auth.signInWithPassword({
-      email: document.getElementById('email').value.trim(),
-      password: document.getElementById('password').value
-    });
-
-    if (error) throw error;
-    message.textContent = '';
-    openApp();
-  } catch (error) {
-    showError(error);
-  }
+async function signIn(){
+  message.textContent='Выполняется вход...';
+  try{
+    if(!db)init();
+    const email=document.getElementById('email').value.trim();
+    const password=document.getElementById('password').value;
+    if(!email||!password)throw new Error('Введи email и пароль.');
+    const {error}=await db.auth.signInWithPassword({email,password});
+    if(error)throw error;
+    message.textContent='';
+    showApp();
+  }catch(e){message.textContent='Ошибка: '+e.message;}
 }
 
-async function loadProducts() {
-  document.getElementById('products').textContent = 'Загрузка...';
-
-  try {
-    const { data, error } = await db.from('products')
+async function loadProducts(){
+  const box=document.getElementById('products');
+  box.textContent='Загрузка товаров...';
+  try{
+    const {data,error}=await db.from('products')
       .select('id,name,variant,price,pack,category,stock')
       .order('name');
-
-    if (error) throw error;
-    products = data || [];
+    if(error)throw error;
+    products=data||[];
     renderProducts();
-  } catch (error) {
-    document.getElementById('products').textContent =
-      'Ошибка загрузки: ' + error.message;
-  }
+  }catch(e){box.textContent='Ошибка загрузки: '+e.message;}
 }
 
-function renderProducts() {
-  const q = document.getElementById('search').value.toLowerCase();
-  const filtered = products.filter(p =>
-    String(p.name  '').toLowerCase().includes(q) 
-    String(p.id || '').toLowerCase().includes(q)
+function renderProducts(){
+  const q=document.getElementById('search').value.toLowerCase();
+  const box=document.getElementById('products');
+  box.replaceChildren();
+  const list=products.filter(p=>
+    String(p.name||'').toLowerCase().includes(q)||
+    String(p.id||'').toLowerCase().includes(q)
   );
+  if(!list.length){box.textContent='Товары не найдены.';return;}
 
-  const container = document.getElementById('products');
-  container.replaceChildren();
+  list.forEach(p=>{
+    const card=document.createElement('div');
+    card.className='item';
+    const name=document.createElement('b');
+    name.textContent=p.name||p.id;
+    card.appendChild(name);
 
-  filtered.forEach(p => {
-    const card = document.createElement('div');
-    card.className = 'item';
-
-    const title = document.createElement('b');
-    title.textContent = p.name || p.id;
-    card.appendChild(title);
-
-    const code = document.createElement('p');
-    code.textContent = 'Код: ' + p.id;
+    const code=document.createElement('p');
+    code.textContent='Код: '+p.id;
     card.appendChild(code);
 
-    const label = document.createElement('label');
-    label.textContent = 'Остаток: ';
-    const input = document.createElement('input');
-    input.type = 'number';
-    input.min = '0';
-    input.step = '1';
-    input.value = p.stock ?? 0;
-    label.appendChild(input);
-    card.appendChild(label);
+    const input=document.createElement('input');
+    input.type='number';input.min='0';input.step='1';
+    input.value=p.stock??0;
+    card.append('Остаток: ',input);
 
-    const button = document.createElement('button');
-    button.textContent = 'Сохранить';
-    button.onclick = async () => {
-      const stock = Number(input.value);
-      if (!Number.isInteger(stock) || stock < 0) {
-        alert('Введи целое число от 0');
-        return;
+    const btn=document.createElement('button');
+    btn.textContent='Сохранить';
+    btn.onclick=async()=>{
+      const stock=Number(input.value);
+      if(!Number.isInteger(stock)||stock<0){
+        alert('Введи целое число от 0');return;
       }
-
-      button.disabled = true;
-      button.textContent = 'Сохраняю...';
-
-      try {
-        const { error } = await db.from('products')
-          .update({ stock, updated_at: new Date().toISOString() })
-          .eq('id', p.id);
-
-        if (error) throw error;
-        p.stock = stock;
-        button.textContent = 'Сохранено';
-      } catch (error) {
-        alert('Не удалось сохранить: ' + error.message);
-        button.textContent = 'Сохранить';
-      } finally {
-        button.disabled = false;
-      }
+      btn.disabled=true;btn.textContent='Сохраняю...';
+      try{
+        const {error}=await db.from('products')
+          .update({stock,updated_at:new Date().toISOString()})
+          .eq('id',p.id);
+        if(error)throw error;
+        p.stock=stock;btn.textContent='Сохранено';
+      }catch(e){alert('Ошибка: '+e.message);btn.textContent='Сохранить';}
+      finally{btn.disabled=false;}
     };
-
-    card.appendChild(button);
-    container.appendChild(card);
+    card.appendChild(btn);box.appendChild(card);
   });
-
-  if (!filtered.length) container.textContent = 'Товары не найдены.';
 }
 
-document.getElementById('loginBtn').addEventListener('click', signIn);
-document.getElementById('password').addEventListener('keydown', e => {
-  if (e.key === 'Enter') signIn();
-});
-document.getElementById('refreshBtn').addEventListener('click', loadProducts);
-document.getElementById('logoutBtn').addEventListener('click', async () => {
-  if (db) await db.auth.signOut();
-  app.style.display = 'none';
-  login.style.display = 'block';
-});
-document.getElementById('search').addEventListener('input', renderProducts);
+document.getElementById('loginBtn').onclick=signIn;
+document.getElementById('password').onkeydown=e=>{
+  if(e.key==='Enter')signIn();
+};
+document.getElementById('refreshBtn').onclick=loadProducts;
+document.getElementById('search').oninput=renderProducts;
+document.getElementById('logoutBtn').onclick=async()=>{
+  if(db)await db.auth.signOut();
+  app.style.display='none';login.style.display='block';
+};
+
+try{
+  init();
+  db.auth.getSession().then(({data,error})=>{
+    if(error){message.textContent=error.message;return;}
+    if(data.session)showApp();
+  }).catch(e=>message.textContent=e.message);
+}catch(e){message.textContent='Ошибка настройки: '+e.message;}
 </script>
 </body>
 </html>

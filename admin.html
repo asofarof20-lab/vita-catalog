@@ -1,4 +1,4 @@
-[24.10.2026 21:47] Алишер: <!doctype html>
+[24.10.2026 22:08] Алишер: <!doctype html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
@@ -26,14 +26,13 @@ img{max-width:130px;max-height:130px;object-fit:contain;display:block}
 <h3>Вход директора</h3>
 <input id="email" type="email" placeholder="Электронная почта" autocomplete="username">
 <input id="password" type="password" placeholder="Пароль" autocomplete="current-password">
-<button id="loginBtn">Войти</button>
-<p id="loginMsg"></p>
+<button id="loginBtn" type="button">Войти</button>
+<p id="loginMsg">Загрузка редактора…</p>
 </section>
 
 <section id="app" class="hidden">
-<button id="logoutBtn">Выйти</button>
+<button id="logoutBtn" type="button">Выйти</button>
 <h2 id="formTitle">Добавить товар</h2>
-
 <div class="card">
 <input id="name" placeholder="Название товара">
 <input id="variant" placeholder="Вариант">
@@ -43,118 +42,168 @@ img{max-width:130px;max-height:130px;object-fit:contain;display:block}
 <textarea id="note" placeholder="Примечание"></textarea>
 <label for="photo">Фотография товара</label>
 <input id="photo" type="file" accept="image/jpeg,image/png,image/webp">
-<button id="saveBtn">Сохранить товар</button>
-<button id="cancelBtn">Отменить редактирование</button>
+<button id="saveBtn" type="button">Сохранить товар</button>
+<button id="cancelBtn" type="button">Отменить редактирование</button>
 <p id="msg"></p>
 </div>
-
 <h2>Товары</h2>
-<button id="refreshBtn">Обновить список</button>
+<button id="refreshBtn" type="button">Обновить список</button>
 <div id="products"></div>
 </section>
 
 <script>
-(() => {
+(function(){
 'use strict';
 
 const $ = id => document.getElementById(id);
-const URL = 'https://yedkbzasynqitvbavwwd.supabase.co';
-const KEY = 'sb_publishable_lV5KW7THtDzy-SN9GTrHLg_z7AFMqUP';
+const SUPABASE_URL = 'https://yedkbzasynqitvbavwwd.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_lV5KW7THtDzy-SN9GTrHLg_z7AFMqUP';
 
-let db;
+let db = null;
 let editingId = null;
 
-function showError(target, error, prefix) {
-  $(target).textContent = prefix + (error?.message || String(error));
+function message(id, text) {
+  $(id).textContent = text;
 }
 
-function setBusy(button, busy, text) {
-  button.disabled = busy;
-  if (text) button.textContent = text;
+function errorMessage(error) {
+  return error && error.message ? error.message : String(error);
 }
 
-async function safe(action) {
+function init() {
+  if (!window.supabase || !window.supabase.createClient) {
+    message('loginMsg',
+      'Не загрузилась библиотека входа. Проверь интернет и обнови страницу.');
+    return;
+  }
+
+  db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  $('loginBtn').addEventListener('click', login);
+  $('password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') login();
+  });
+  $('email').addEventListener('keydown', e => {
+    if (e.key === 'Enter') login();
+  });
+
+  $('logoutBtn').addEventListener('click', logout);
+  $('saveBtn').addEventListener('click', saveProduct);
+  $('cancelBtn').addEventListener('click', clearForm);
+  $('refreshBtn').addEventListener('click', loadProducts);
+
+  start();
+}
+
+async function start() {
   try {
-    await action();
+    message('loginMsg', 'Проверяю вход…');
+    const {data, error} = await db.auth.getSession();
+    if (error) throw error;
+    showSession(data.session);
   } catch (error) {
-    console.error(error);
-    alert('Ошибка: ' + (error?.message || error));
+    message('loginMsg', 'Ошибка запуска: ' + errorMessage(error));
+  }
+}
+
+function showSession(session) {
+  $('login').classList.toggle('hidden', !!session);
+  $('app').classList.toggle('hidden', !session);
+
+  if (session) {
+    loadProducts();
+  } else {
+    message('loginMsg', 'Введи почту и пароль аккаунта Supabase.');
   }
 }
 
 async function login() {
-  const button = $('loginBtn');
-  setBusy(button, true, 'Выполняю вход…');
-  $('loginMsg').textContent = '';
+  if (!db) {
+    message('loginMsg', 'Сервис входа не загрузился. Обнови страницу.');
+    return;
+  }
 
-  try {
+  const button = $('loginBtn');
+  button.disabled = true;
+  button.textContent = 'Выполняю вход…';
+  message('loginMsg', 'Проверяю данные…');
+[24.10.2026 22:08] Алишер: try {
     const email = $('email').value.trim();
     const password = $('password').value;
 
     if (!email || !password) {
-      $('loginMsg').textContent = 'Введи почту и пароль.';
+      message('loginMsg', 'Введи электронную почту и пароль.');
       return;
     }
 
-    const { error } = await db.auth.signInWithPassword({ email, password });
+    const {data, error} = await db.auth.signInWithPassword({
+      email,
+      password
+    });
+
     if (error) {
-      showError('loginMsg', error, 'Ошибка входа: ');
+      message('loginMsg', 'Ошибка входа: ' + errorMessage(error));
       return;
     }
 
-    await start();
+    showSession(data.session);
   } catch (error) {
-    showError('loginMsg', error, 'Ошибка: ');
+    message('loginMsg', 'Ошибка входа: ' + errorMessage(error));
   } finally {
-    setBusy(button, false, 'Войти');
+    button.disabled = false;
+    button.textContent = 'Войти';
   }
 }
 
 async function logout() {
-  const { error } = await db.auth.signOut();
-  if (error) {
-    alert('Не удалось выйти: ' + error.message);
-    return;
+  try {
+    const {error} = await db.auth.signOut();
+    if (error) throw error;
+    showSession(null);
+  } catch (error) {
+    alert('Ошибка выхода: ' + errorMessage(error));
   }
-  $('app').classList.add('hidden');
-  $('login').classList.remove('hidden');
 }
 
 function clearForm() {
   editingId = null;
   ['name','variant','price','pack','category','note','photo']
     .forEach(id => $(id).value = '');
+
   $('formTitle').textContent = 'Добавить товар';
-  $('msg').textContent = '';
   $('saveBtn').textContent = 'Сохранить товар';
+  message('msg', '');
 }
 
 function editProduct(product) {
-[24.10.2026 21:47] Алишер: editingId = product.id;
+  editingId = product.id;
+
   ['name','variant','price','pack','category','note']
-    .forEach(key => $(key).value = product[key] ?? '');
+    .forEach(key => {
+      $(key).value = product[key] ?? '';
+    });
+
   $('photo').value = '';
   $('formTitle').textContent = 'Изменить товар';
-  $('msg').textContent = 'Редактирование: ' + product.name +
-    '. Новое фото можно выбрать ниже.';
   $('saveBtn').textContent = 'Сохранить изменения';
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  message('msg', 'Редактирование товара: ' + product.name);
+  window.scrollTo({top: 0, behavior: 'smooth'});
 }
 
 async function saveProduct() {
   const button = $('saveBtn');
-  const msg = $('msg');
   const name = $('name').value.trim();
   const rawPrice = $('price').value;
   const price = Number(rawPrice);
 
-  if (!name  rawPrice === ''  !Number.isFinite(price) || price < 0) {
-    msg.textContent = 'Укажи название и правильную цену.';
+  if (!name  rawPrice === '' 
+      !Number.isFinite(price) || price < 0) {
+    message('msg', 'Укажи название и правильную цену.');
     return;
   }
 
-  setBusy(button, true, 'Сохраняю…');
-  msg.textContent = '';
+  button.disabled = true;
+  button.textContent = 'Сохраняю…';
 
   try {
     const row = {
@@ -170,73 +219,67 @@ async function saveProduct() {
 
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        msg.textContent = 'Фото должно быть не больше 5 МБ.';
-        return;
+        throw new Error('Фото должно быть не больше 5 МБ.');
       }
 
       if (!['image/jpeg','image/png','image/webp'].includes(file.type)) {
-        msg.textContent = 'Разрешены только JPG, PNG и WEBP.';
-        return;
+        throw new Error('Разрешены только JPG, PNG и WEBP.');
       }
 
-      const ext = file.type === 'image/jpeg' ? 'jpg' :
-        file.type.split('/')[1];
-      const path = crypto.randomUUID() + '.' + ext;
+      const ext = file.type === 'image/jpeg'
+        ? 'jpg' : file.type.split('/')[1];
 
-      const { error: uploadError } = await db.storage
+      const path = (crypto.randomUUID
+        ? crypto.randomUUID()
+        : Date.now() + '-' + Math.random().toString(16).slice(2)
+      ) + '.' + ext;
+
+      const {error: uploadError} = await db.storage
         .from('product-images')
         .upload(path, file);
 
-      if (uploadError) {
-        showError('msg', uploadError, 'Ошибка загрузки фото: ');
-        return;
-      }
-
+      if (uploadError) throw uploadError;
       row.image_url = path;
     }
 
     let result;
+
     if (editingId !== null) {
-      result = await db.from('products').update(row).eq('id', editingId);
+      result = await db.from('products')
+        .update(row).eq('id', editingId);
     } else {
       result = await db.from('products').insert(row);
     }
 
-    if (result.error) {
-      showError('msg', result.error, 'Ошибка базы данных: ');
-      return;
-    }
+    if (result.error) throw result.error;
 
     clearForm();
-    msg.textContent = 'Товар сохранён.';
+    message('msg', 'Товар сохранён.');
     await loadProducts();
+
   } catch (error) {
-    showError('msg', error, 'Ошибка: ');
+    message('msg', 'Ошибка: ' + errorMessage(error));
   } finally {
-    setBusy(button, false, editingId !== null ?
-      'Сохранить изменения' : 'Сохранить товар');
+    button.disabled = false;
+    button.textContent = editingId !== null
+      ? 'Сохранить изменения' : 'Сохранить товар';
   }
 }
 
 async function loadProducts() {
   const box = $('products');
-  box.textContent = 'Загружаю товары…';
+  message('products', 'Загружаю товары…');
 
   try {
-    const { data, error } = await db
-      .from('products')
-      .select('*')
-      .order('name');
+    const {data, error} = await db.from('products')
+      .select('*').order('name');
 
-    if (error) {
-      showError('products', error, 'Не удалось загрузить товары: ');
-      return;
-    }
+    if (error) throw error;
 
     box.replaceChildren();
 
     if (!data || data.length === 0) {
-      box.textContent = 'Товаров пока нет.';
+      message('products', 'Товаров пока нет.');
       return;
     }
 
@@ -247,16 +290,15 @@ async function loadProducts() {
       const title = document.createElement('h3');
       title.textContent = product.name || '(без названия)';
       card.append(title);
-
-      const info = document.createElement('p');
+[24.10.2026 22:08] Алишер: const info = document.createElement('p');
       info.textContent = 'Цена: ' + product.price +
         ' · Категория: ' + (product.category || '—');
       card.append(info);
 
       if (product.image_url) {
-        const { data: imageData, error: imageError } = await db.storage
-          .from('product-images')
-          .createSignedUrl(product.image_url, 3600);
+        const {data: imageData, error: imageError} =
+          await db.storage.from('product-images')
+            .createSignedUrl(product.image_url, 3600);
 
         if (!imageError && imageData?.signedUrl) {
           const image = document.createElement('img');
@@ -267,72 +309,45 @@ async function loadProducts() {
       }
 
       const edit = document.createElement('button');
+      edit.type = 'button';
       edit.textContent = 'Изменить';
-      edit.onclick = () => editProduct(product);
+      edit.addEventListener('click', () => editProduct(product));
       card.append(edit);
-[24.10.2026 21:47] Алишер: const del = document.createElement('button');
-      del.textContent = 'Удалить товар';
+
+      const del = document.createElement('button');
+      del.type = 'button';
       del.className = 'danger';
-      del.onclick = () => safe(async () => {
+      del.textContent = 'Удалить товар';
+
+      del.addEventListener('click', async () => {
         if (!confirm('Удалить товар «' + product.name + '»?')) return;
 
-        const { error: deleteError } = await db
-          .from('products')
-          .delete()
-          .eq('id', product.id);
+        try {
+          const {error: deleteError} = await db.from('products')
+            .delete().eq('id', product.id);
 
-        if (deleteError) {
-          alert('Не удалось удалить товар: ' + deleteError.message);
-          return;
+          if (deleteError) throw deleteError;
+          await loadProducts();
+        } catch (error) {
+          alert('Ошибка удаления: ' + errorMessage(error));
         }
-
-        await loadProducts();
       });
+
       card.append(del);
       box.append(card);
     }
   } catch (error) {
-    showError('products', error, 'Ошибка: ');
+    message('products', 'Ошибка загрузки товаров: ' + errorMessage(error));
   }
 }
 
-async function start() {
-  const { data, error } = await db.auth.getSession();
-
-  if (error) {
-    $('loginMsg').textContent = 'Ошибка проверки входа: ' + error.message;
-    return;
+window.addEventListener('error', event => {
+  if ($('loginMsg')) {
+    message('loginMsg', 'Ошибка страницы: ' + event.message);
   }
-
-  const session = data.session;
-  $('login').classList.toggle('hidden', !!session);
-  $('app').classList.toggle('hidden', !session);
-
-  if (session) await loadProducts();
-}
-
-async function init() {
-  if (!window.supabase) {
-    $('loginMsg').textContent =
-      'Не загрузилась библиотека. Проверь интернет и обнови страницу.';
-    return;
-  }
-
-  db = window.supabase.createClient(URL, KEY);
-  $('loginBtn').onclick = () => safe(login);
-  $('logoutBtn').onclick = () => safe(logout);
-  $('saveBtn').onclick = () => safe(saveProduct);
-  $('cancelBtn').onclick = clearForm;
-  $('refreshBtn').onclick = () => safe(loadProducts);
-
-  await start();
-}
-
-init().catch(error => {
-  console.error(error);
-  $('loginMsg').textContent =
-    'Не удалось запустить редактор: ' + (error?.message || error);
 });
+
+init();
 })();
 </script>
 </body>

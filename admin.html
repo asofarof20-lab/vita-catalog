@@ -1,229 +1,153 @@
-<!doctype html>
+[25.10.2026 9:44] Алишер: <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>VITA — Редактор</title>
 <style>
-*{box-sizing:border-box}
-body{margin:0;background:#f8f5ed;color:#234734;font:16px Arial,sans-serif}
-main{max-width:850px;margin:auto;padding:18px}
-h1{color:#20543a}
-section,.item{background:white;padding:18px;border-radius:16px;margin:14px 0}
-input,textarea,button{width:100%;padding:13px;margin:6px 0;border:1px solid #ddd;border-radius:10px;font:inherit}
-button{background:#24563e;color:white;border:0;cursor:pointer}
-button:disabled{opacity:.5}
-.danger{background:#a83b3b}
+body{font:16px Arial;background:#f8f5ed;color:#234734;margin:0;padding:18px}
+main{max-width:700px;margin:auto}
+section,.item{background:white;padding:16px;margin:12px 0;border-radius:12px}
+input,textarea,button{box-sizing:border-box;width:100%;padding:12px;margin:6px 0;border:1px solid #ddd;border-radius:8px;font:inherit}
+button{background:#24563e;color:white;border:0}
 .hidden{display:none}
-img{width:110px;height:110px;object-fit:contain}
-small{color:#666}
-#status,#loginStatus{overflow-wrap:anywhere}
+img{width:100px;height:100px;object-fit:contain}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
 <main>
-<h1>VITA — Редактор товаров</h1>
-
+<h2>VITA — Редактор товаров</h2>
 <section id="login">
-<h2>Вход</h2>
 <input id="email" type="email" placeholder="Электронная почта">
 <input id="password" type="password" placeholder="Пароль">
 <button id="loginBtn">Войти</button>
-<p id="loginStatus">Подключение...</p>
+<p id="message">Запуск редактора...</p>
 </section>
-
 <div id="app" class="hidden">
-<button id="logoutBtn">Выйти</button>
+<button id="logout">Выйти</button>
 <section>
-<h2 id="heading">Добавить товар</h2>
-<input id="name" placeholder="Название">
+<h3 id="formTitle">Добавить товар</h3>
+<input id="name" placeholder="Название товара">
 <input id="variant" placeholder="Вариант">
 <input id="price" type="number" min="0" step="0.01" placeholder="Цена">
 <input id="pack" placeholder="Упаковка">
 <input id="category" placeholder="Категория">
 <textarea id="note" placeholder="Описание"></textarea>
-<label>Фотография товара</label>
 <input id="photo" type="file" accept="image/jpeg,image/png,image/webp">
-<small>JPG, PNG, WEBP — до 5 МБ</small>
-<button id="saveBtn">Сохранить товар</button>
-<button id="cancelBtn">Отменить редактирование</button>
+<button id="save">Сохранить товар</button>
+<button id="cancel">Отменить редактирование</button>
 <p id="status"></p>
 </section>
-<h2>Список товаров</h2>
-<button id="refreshBtn">Обновить список</button>
+<h3>Товары</h3>
+<button id="refresh">Обновить список</button>
 <div id="products"></div>
 </div>
 </main>
-
 <script>
+(function(){
+const $=id=>document.getElementById(id);
+const say=(id,text)=>$(id).textContent=text;
 const URL_DB="https://yedkbzasynqitvbavwwd.supabase.co";
 const KEY="sb_publishable_lV5KW7THtDzy-SN9GTrHLg_z7AFMqUP";
-const $=id=>document.getElementById(id);
-let db,editing=null,items=[];
-
-function msg(id,text){$(id).textContent=text}
-function err(e){return e?.message||String(e)}
+let db,items=[],editing=null;
 
 function show(session){
 $("login").classList.toggle("hidden",!!session);
 $("app").classList.toggle("hidden",!session);
-if(session)loadProducts();
-else msg("loginStatus","Введи почту и пароль.");
+if(session)load();
 }
-
 async function login(){
-$("loginBtn").disabled=true;
-msg("loginStatus","Выполняется вход...");
 try{
+say("message","Выполняется вход...");
 const {data,error}=await db.auth.signInWithPassword({
-email:$("email").value.trim(),
-password:$("password").value
+email:$("email").value.trim(),password:$("password").value
 });
 if(error)throw error;
 show(data.session);
-}catch(e){msg("loginStatus","Ошибка: "+err(e))}
-finally{$("loginBtn").disabled=false}
+}catch(e){say("message","Ошибка входа: "+e.message)}
 }
-
-async function logout(){
-await db.auth.signOut();
-show(null);
+async function load(){
+say("products","Загрузка...");
+try{
+const {data,error}=await db.from("products").select("*").order("name");
+if(error)throw error;
+items=data||[];
+$("products").replaceChildren();
+if(!items.length){say("products","Товаров нет.");return}
+items.forEach(p=>{
+const card=document.createElement("div");card.className="item";
+const title=document.createElement("b");title.textContent=p.name;
+const info=document.createElement("p");info.textContent="Цена: "+p.price;
+const edit=document.createElement("button");edit.textContent="Изменить";
+edit.onclick=()=>editItem(p);
+const del=document.createElement("button");del.textContent="Удалить";
+del.onclick=()=>removeItem(p);
+card.append(title,info,edit,del);$("products").append(card);
+});
+}catch(e){say("products","Ошибка загрузки: "+e.message)}
 }
-
+function editItem(p){
+editing=p.id;
+["name","variant","price","pack","category","note"].forEach(k=>$(k).value=p[k]??"");
+$("formTitle").textContent="Изменить товар";
+}
 function clearForm(){
 editing=null;
-["name","variant","price","pack","category","note","photo"]
-.forEach(id=>$(id).value="");
-$("heading").textContent="Добавить товар";
-$("saveBtn").textContent="Сохранить товар";
-msg("status","");
+["name","variant","price","pack","category","note","photo"].forEach(k=>$(k).value="");
+$("formTitle").textContent="Добавить товар";
 }
-
-function editProduct(id){
-const p=items.find(x=>String(x.id)===String(id));
-if(!p)return;
-editing=p.id;
-["name","variant","price","pack","category","note"]
-.forEach(k=>$(k).value=p[k]??"");
-$("photo").value="";
-$("heading").textContent="Изменить товар";
-$("saveBtn").textContent="Сохранить изменения";
-window.scrollTo({top:0,behavior:"smooth"});
-}
-
-async function saveProduct(){
-const name=$("name").value.trim();
-const rawPrice=$("price").value;
-const price=Number(rawPrice);
-if(!namerawPrice===""!Number.isFinite(price)||price<0){
-msg("status","Укажи название и правильную цену.");
-return;
-}
-const btn=$("saveBtn");
-btn.disabled=true;
-msg("status","Сохранение...");
+async function save(){
 try{
-const row={
-name,price,
-variant:$("variant").value.trim()||null,
-pack:$("pack").value.trim()||null,
-[25.10.2026 9:36] Алишер: category:$("category").value.trim()||null,
-note:$("note").value.trim()||null
-};
+const name=$("name").value.trim(),raw=$("price").value,price=Number(raw);
+if(!nameraw===""!Number.isFinite(price)||price<0)
+throw Error("Укажи название и правильную цену.");
+say("status","Сохранение...");
+const row={name,price,variant:$("variant").value.trim()||null,
+[25.10.2026 9:44] Алишер: pack:$("pack").value.trim()null,category:$("category").value.trim()null,
+note:$("note").value.trim()||null};
 const file=$("photo").files[0];
 if(file){
-if(file.size>5*1024*1024)throw Error("Фото больше 5 МБ.");
-if(!["image/jpeg","image/png","image/webp"].includes(file.type))
-throw Error("Неверный формат фото.");
+if(file.size>5242880)throw Error("Фото больше 5 МБ.");
+if(!["image/jpeg","image/png","image/webp"].includes(file.type))throw Error("Неверный формат фото.");
 const ext=file.type==="image/jpeg"?"jpg":file.type.split("/")[1];
 const path=crypto.randomUUID()+"."+ext;
-const {error}=await db.storage.from("product-images").upload(path,file);
-if(error)throw error;
+const up=await db.storage.from("product-images").upload(path,file);
+if(up.error)throw up.error;
 row.image_url=path;
 }
 const result=editing!==null
 ?await db.from("products").update(row).eq("id",editing)
 :await db.from("products").insert(row);
 if(result.error)throw result.error;
-clearForm();
-msg("status","Товар сохранён.");
-await loadProducts();
-}catch(e){msg("status","Ошибка: "+err(e))}
-finally{btn.disabled=false}
+clearForm();say("status","Сохранено.");await load();
+}catch(e){say("status","Ошибка: "+e.message)}
 }
-
-async function deleteProduct(id){
-const p=items.find(x=>String(x.id)===String(id));
-if(!p||!confirm("Удалить товар «"+p.name+"»?"))return;
+async function removeItem(p){
+if(!confirm("Удалить товар "+p.name+"?"))return;
 try{
-const {error}=await db.from("products").delete().eq("id",id);
+const {error}=await db.from("products").delete().eq("id",p.id);
 if(error)throw error;
-await loadProducts();
-}catch(e){alert("Ошибка: "+err(e))}
+await load();
+}catch(e){alert("Ошибка: "+e.message)}
 }
-
-async function loadProducts(){
-const box=$("products");
-box.textContent="Загрузка товаров...";
-try{
-const {data,error}=await db.from("products")
-.select("*").order("name");
-if(error)throw error;
-items=data||[];
-box.replaceChildren();
-if(!items.length){box.textContent="Товаров пока нет.";return}
-for(const p of items){
-const card=document.createElement("div");
-card.className="item";
-const title=document.createElement("h3");
-title.textContent=p.name||"Без названия";
-card.append(title);
-const info=document.createElement("p");
-info.textContent="Цена: "+p.price+" | "+(p.category||"");
-card.append(info);
-if(p.image_url){
-const {data:photo}=await db.storage
-.from("product-images").createSignedUrl(p.image_url,3600);
-if(photo?.signedUrl){
-const img=document.createElement("img");
-img.src=photo.signedUrl;
-img.alt=p.name;
-card.append(img);
-}
-}
-const edit=document.createElement("button");
-edit.textContent="Изменить";
-edit.onclick=()=>editProduct(p.id);
-const del=document.createElement("button");
-del.textContent="Удалить";
-del.className="danger";
-del.onclick=()=>deleteProduct(p.id);
-card.append(edit,del);
-box.append(card);
-}
-}catch(e){box.textContent="Ошибка: "+err(e)}
-}
-
 async function start(){
+if(!window.supabase){say("message","Ошибка: библиотека Supabase не загрузилась.");return}
 try{
-if(!window.supabase?.createClient)
-throw Error("Библиотека Supabase не загрузилась.");
 db=window.supabase.createClient(URL_DB,KEY);
 $("loginBtn").onclick=login;
-$("logoutBtn").onclick=logout;
-$("saveBtn").onclick=saveProduct;
-$("cancelBtn").onclick=clearForm;
-$("refreshBtn").onclick=loadProducts;
-$("password").onkeydown=e=>{if(e.key==="Enter")login()};
+$("logout").onclick=async()=>{await db.auth.signOut();show(null)};
+$("save").onclick=save;
+$("cancel").onclick=clearForm;
+$("refresh").onclick=load;
 const {data,error}=await db.auth.getSession();
 if(error)throw error;
 show(data.session);
-}catch(e){msg("loginStatus","Ошибка запуска: "+err(e))}
+if(!data.session)say("message","Введи почту и пароль.");
+}catch(e){say("message","Ошибка запуска: "+e.message)}
 }
-</script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"
-onload="start()"
-onerror="document.getElementById('loginStatus').textContent='Ошибка загрузки Supabase'">
+start();
+})();
 </script>
 </body>
 </html>

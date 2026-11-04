@@ -202,6 +202,14 @@ async function save(event){
     }
     row.images = [...keptImages, ...uploaded];
     row.image_url = row.images[0] || null;
+    // The products.id column is TEXT and has no database default.
+    // Keep existing IDs unchanged when editing; generate a unique text ID for new products.
+    if(editing === null){
+      if(!window.crypto || typeof window.crypto.randomUUID !== "function"){
+        throw new Error("Не удалось автоматически создать код товара. Открой админ-панель через HTTPS.");
+      }
+      row.id = window.crypto.randomUUID();
+    }
     const result = editing !== null
       ? await db.from("products").update(row).eq("id", editing).select("id")
       : await db.from("products").insert(row).select("id");

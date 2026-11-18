@@ -314,4 +314,5 @@ document.getElementById('sendButton').addEventListener('click',async()=>{const a
 async function loadVitaData(){try{const sd=await vitaRequest({action:'shops'});shops=sd.shops||[];document.getElementById('shopSelect').innerHTML='<option value="">Выберите магазин…</option>'+shops.map(s=>'<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>').join('')+'<option value="__new__">＋ Добавить новый магазин</option>';const st=await vitaRequest({action:'stock',codes:products.map(p=>String(p.id))});stockMap=st.stock||{};stockLoaded=true;renderProducts()}catch(e){document.getElementById('shopSelect').innerHTML='<option value="">Список магазинов недоступен</option><option value="__new__">＋ Добавить новый магазин</option>';document.getElementById('results').textContent='Нет связи со складом VITANET: '+(e.message||'ошибка')} }
 render();
 loadProducts().then(()=>loadVitaData());
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&products.length)vitaRequest({action:'stock',codes:products.map(p=>String(p.id))}).then(x=>{stockMap=x.stock||{};stockLoaded=true;renderProducts()}).catch(()=>{})});
 </script></body></html>

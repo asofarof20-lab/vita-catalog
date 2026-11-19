@@ -254,6 +254,10 @@ let products = [];
 const SUPABASE_URL = "https://yedkbzasynqitvbavwwd.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_lV5KW7THtDzy-SN9GTrHLg_z7AFMqUP";
 const IMAGE_BUCKET = "product-images";
+const STOCK_SUPABASE_URL = "https://btxmlgdmdvmtijmgfhhg.supabase.co";
+const STOCK_SUPABASE_KEY = "sb_publishable_Bn5HFGp4ESlKqT_mfZ7ttA_cpaIPAUm";
+const stockClient = window.supabase.createClient(STOCK_SUPABASE_URL, STOCK_SUPABASE_KEY);
+let stockByCode = new Map(), stockLoaded = false, stockLoadError = false;
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const categories=[['Все товары','✦'],['Уборка','🧽'],['Стирка','🫧'],['Косметика','🧴'],['Личная гигиена','♡'],['Для дома','⌂'],['Сладости','🍬'],['Прочее','⋯'],['Акция','★']];
 const cart={};let activeCategory='Все товары',query='';
@@ -292,12 +296,29 @@ async function loadProducts(){
     container.innerHTML='<p class="empty">Ошибка загрузки каталога: '+esc(error.message||'неизвестная ошибка')+'. Проверь доступ на чтение таблицы products (RLS) и настройки Supabase.</p>';
   }
 }
+async function loadStock(){
+  try{
+    const {data,error}=await stockClient.rpc('vita_public_stock');
+    if(error) throw error;
+    stockByCode=new Map((data||[]).map(x=>[String(x.product_code),Number(x.quantity)]));
+    stockLoaded=true;stockLoadError=false;renderProducts();
+  }catch(error){
+    stockLoaded=false;stockLoadError=true;
+    console.warn('Не удалось загрузить остатки VITANET:',error);
+    renderProducts();
+  }
+}
+function stockText(p){
+  if(!stockLoaded)return stockLoadError?'Остаток временно недоступен':'Проверяем остаток…';
+  const q=stockByCode.get(String(p.id));
+  return q===undefined?'На складе не указан':q>0?'На складе: '+q+' шт.':'Нет в наличии';
+}
 function renderCategories(){document.getElementById('categories').innerHTML=categories.map(([n,i])=>`<button class="cat ${n===activeCategory?'active':''}" data-category="${esc(n)}">${i} ${esc(n)}</button>`).join('')}
 function filtered(){let a=products.map((p,i)=>({...p,key:i})).filter(p=>(activeCategory==='Все товары'||(activeCategory==='Акция'?Boolean(p.note):p.category===activeCategory))&&`${p.name} ${p.id} ${p.variant} ${p.category}`.toLowerCase().includes(query));let s=document.getElementById('sort').value;if(s==='name')a.sort((x,y)=>x.name.localeCompare(y.name,'ru'));if(s==='priceUp')a.sort((x,y)=>x.price-y.price);if(s==='priceDown')a.sort((x,y)=>y.price-x.price);return a}
-function renderProducts(){let a=filtered();document.getElementById('results').textContent=`Найдено товаров: ${a.length} из ${products.length}`;document.getElementById('products').innerHTML=a.length?a.map(p=>`<article class="product">${p.note?`<span class="pill">${p.note.includes('Акция')?'Акция':'Предложение'}</span>`:''}<div class="placeholder">${p.image_srcs?.length?`<div class="photo-stack">${p.image_srcs.map((u,i)=>`<img class="product-photo ${i===0?'active':''}" src="${esc(u)}" alt="${esc(p.name)}" loading="lazy" data-photo-index="${i}">`).join('')}${p.image_srcs.length>1?`<button class="photo-nav prev" type="button" aria-label="Предыдущее фото" data-photo-step="-1">‹</button><span class="photo-count">1/${p.image_srcs.length}</span><button class="photo-nav next" type="button" aria-label="Следующее фото" data-photo-step="1">›</button>`:''}</div>`:`<div><b>▧</b><small>Фото пока нет</small></div>`}</div><h3>${esc(p.name)}</h3><p class="variant">${esc(p.variant||'')}</p><p class="meta">Код: ${esc(p.id)}${p.pack?` · В коробке: ${p.pack} шт.`:''}</p><p class="note ${p.note?'':'blank-note'}">${p.note?esc(p.note):'—'}</p><div class="price">${money(p.price)} <small>/ шт.</small></div><div class="qty"><button data-qty="${p.key}" data-delta="-1" aria-label="Уменьшить">−</button><strong>${cart[p.key]||0}</strong><button data-qty="${p.key}" data-delta="1" aria-label="Увеличить">+</button></div></article>`).join(''):'<p class="empty">Ничего не найдено. Попробуйте изменить поиск.</p>'}
+function renderProducts(){let a=filtered();document.getElementById('results').textContent=`Найдено товаров: ${a.length} из ${products.length}`;document.getElementById('products').innerHTML=a.length?a.map(p=>`<article class="product">${p.note?`<span class="pill">${p.note.includes('Акция')?'Акция':'Предложение'}</span>`:''}<div class="placeholder">${p.image_srcs?.length?`<div class="photo-stack">${p.image_srcs.map((u,i)=>`<img class="product-photo ${i===0?'active':''}" src="${esc(u)}" alt="${esc(p.name)}" loading="lazy" data-photo-index="${i}">`).join('')}${p.image_srcs.length>1?`<button class="photo-nav prev" type="button" aria-label="Предыдущее фото" data-photo-step="-1">‹</button><span class="photo-count">1/${p.image_srcs.length}</span><button class="photo-nav next" type="button" aria-label="Следующее фото" data-photo-step="1">›</button>`:''}</div>`:`<div><b>▧</b><small>Фото пока нет</small></div>`}</div><h3>${esc(p.name)}</h3><p class="variant">${esc(p.variant||'')}</p><p class="meta">Код: ${esc(p.id)}${p.pack?` · В коробке: ${p.pack} шт.`:''} · ${stockText(p)}</p><p class="note ${p.note?'':'blank-note'}">${p.note?esc(p.note):'—'}</p><div class="price">${money(p.price)} <small>/ шт.</small></div><div class="qty"><button data-qty="${p.key}" data-delta="-1" aria-label="Уменьшить">−</button><strong>${cart[p.key]||0}</strong><button data-qty="${p.key}" data-delta="1" aria-label="Увеличить">+</button></div></article>`).join(''):'<p class="empty">Ничего не найдено. Попробуйте изменить поиск.</p>'}
 function renderCart(){let total=0;let a=products.map((p,i)=>({...p,key:i})).filter(p=>(cart[p.key]||0)>0);document.getElementById('cartItems').innerHTML=a.length?a.map(p=>{let q=cart[p.key],sum=q*p.price;total+=sum;return `<div class="cartItem"><b>${esc(p.name)}</b><small>Код: ${esc(p.id)} · ${money(p.price)} / шт.</small><div class="cartRow"><div class="qty"><button data-cartqty="${p.key}" data-delta="-1">−</button><strong>${q}</strong><button data-cartqty="${p.key}" data-delta="1">+</button></div><strong>${money(sum)}</strong></div></div>`}).join(''):'<div class="empty">Корзина пока пуста. Добавьте товары из каталога.</div>';document.getElementById('total').textContent=money(total)}
 function render(){renderCategories();renderProducts();renderCart()}
-function change(i,d){cart[i]=Math.max(0,(cart[i]||0)+d);render()}
+function change(i,d){const p=products[i];if(stockLoaded&&d>0){const available=stockByCode.get(String(p?.id))||0;if((cart[i]||0)+d>available){alert(available>0?'Доступно на складе: '+available+' шт.':'Товар пока не числится на складе.');return}}cart[i]=Math.max(0,(cart[i]||0)+d);render()}
 document.getElementById('search').addEventListener('input',e=>{query=e.target.value.trim().toLowerCase();renderProducts()});
 document.getElementById('searchBtn').addEventListener('click',()=>document.getElementById('catalog').scrollIntoView({behavior:'smooth'}));
 document.getElementById('sort').addEventListener('change',renderProducts);
@@ -309,4 +330,5 @@ document.getElementById('goCatalog').addEventListener('click',()=>document.getEl
 document.getElementById('sendButton').addEventListener('click',()=>{let a=products.map((p,i)=>({...p,key:i})).filter(p=>(cart[p.key]||0)>0);if(!a.length){alert('Сначала добавьте товары в корзину.');return}let shop=document.getElementById('shop').value.trim(),phone=document.getElementById('phone').value.trim(),comment=document.getElementById('comment').value.trim();if(!shop||!phone){alert('Введите название магазина и телефон.');return}let total=0,msg='🛍 ЗАКАЗ VITA\n\n🏪 Магазин: '+shop+'\n📞 Телефон: '+phone+'\n\nСОСТАВ ЗАКАЗА:\n';a.forEach(p=>{let q=cart[p.key],sum=q*p.price;total+=sum;msg+=`• ${p.name} (код ${p.id})\n  ${q} шт. × ${money(p.price)} = ${money(sum)}\n`});msg+='\nИТОГО: '+money(total);if(comment)msg+='\n\nКомментарий: '+comment;location.href='https://wa.me/'+WHATSAPP_NUMBER+'?text='+encodeURIComponent(msg)});
 render();
 loadProducts();
+loadStock();
 </script></body></html>

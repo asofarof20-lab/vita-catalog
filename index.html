@@ -286,12 +286,15 @@ async function loadProducts(){
     }));
     if(products.length){
       try{
-        const stockResponse=await fetch(VITANET_ORDER_URL,{method:'POST',headers:{'Content-Type':'application/json','apikey':VITANET_PUBLIC_KEY,'Authorization':'Bearer '+VITANET_PUBLIC_KEY},body:JSON.stringify({action:'stock',codes:products.map(p=>String(p.id))})});
-        const stockResult=await stockResponse.json();
-        if(stockResponse.ok&&stockResult?.ok){
-          const stockMap=new Map((stockResult.stock||[]).map(x=>[String(x.product_code),Number(x.quantity||0)]));
-          products=products.map(p=>({...p,stock_quantity:stockMap.get(String(p.id))??0}));
-        }else{products=products.map(p=>({...p,stock_quantity:null}));}
+        const stockMap=new Map();
+        for(let i=0;i<products.length;i+=200){
+          const codes=products.slice(i,i+200).map(p=>String(p.id));
+          const stockResponse=await fetch(VITANET_ORDER_URL,{method:'POST',headers:{'Content-Type':'application/json','apikey':VITANET_PUBLIC_KEY,'Authorization':'Bearer '+VITANET_PUBLIC_KEY},body:JSON.stringify({action:'stock',codes})});
+          const stockResult=await stockResponse.json();
+          if(!stockResponse.ok||!stockResult?.ok)throw new Error(stockResult?.error||'Склад временно недоступен');
+          (stockResult.stock||[]).forEach(x=>stockMap.set(String(x.product_code),Number(x.quantity||0)));
+        }
+        products=products.map(p=>({...p,stock_quantity:stockMap.get(String(p.id))??0}));
       }catch(_){products=products.map(p=>({...p,stock_quantity:null}));}
     }
     render();

@@ -39,6 +39,9 @@ button.danger{background:#9e3434}
 <section>
 <h3 id="formTitle">Добавить товар</h3>
 <form id="productForm">
+<label for="id">Код товара *</label>
+<input id="id" maxlength="80" required placeholder="Например: bd 45.42.403">
+<p class="photo-help">Укажи свой короткий код товара. Он будет использоваться в каталоге и заказах.</p>
 <label for="name">Название товара *</label>
 <input id="name" maxlength="200" required placeholder="Название товара">
 <label for="variant">Вариант</label>
@@ -135,7 +138,8 @@ async function load(){
 
 function editItem(p){
   editing = p.id;
-  ["name","variant","price","pack","category","note"].forEach(k => { $(k).value = p[k] ?? ""; });
+  ["id","name","variant","price","pack","category","note"].forEach(k => { $(k).value = p[k] ?? ""; });
+  $("id").readOnly = true;
   $("photo").value = "";
   keptImages = Array.isArray(p.images) && p.images.length ? [...p.images] : (p.image_url ? [p.image_url] : []);
   renderFormPhotos();
@@ -161,6 +165,7 @@ function clearForm(){
   editing = null;
   keptImages = [];
   $("productForm").reset();
+  $("id").readOnly = false;
   renderFormPhotos();
   $("formTitle").textContent = "Добавить товар";
   say("status", "");
@@ -169,14 +174,18 @@ function clearForm(){
 async function save(event){
   event.preventDefault();
   if(saving) return;
+  const productCode = $("id").value.trim();
   const name = $("name").value.trim();
   const rawPrice = $("price").value.trim();
+  if(!productCode){ say("status", "Укажи код товара."); $("id").focus(); return; }
+  if(/[\\r\\n]/.test(productCode)){ say("status", "Код товара должен быть в одной строке."); $("id").focus(); return; }
   const price = Number(rawPrice);
   if(!name){ say("status", "Укажи название товара."); $("name").focus(); return; }
   if(rawPrice === "" || !Number.isFinite(price) || price < 0){
     say("status", "Укажи правильную цену — число не меньше нуля."); $("price").focus(); return;
   }
   const row = {
+    id: productCode,
     name, price,
     variant: $("variant").value.trim() || null,
     pack: $("pack").value.trim() || null,
@@ -202,14 +211,6 @@ async function save(event){
     }
     row.images = [...keptImages, ...uploaded];
     row.image_url = row.images[0] || null;
-    // The products.id column is TEXT and has no database default.
-    // Keep existing IDs unchanged when editing; generate a unique text ID for new products.
-    if(editing === null){
-      if(!window.crypto || typeof window.crypto.randomUUID !== "function"){
-        throw new Error("Не удалось автоматически создать код товара. Открой админ-панель через HTTPS.");
-      }
-      row.id = window.crypto.randomUUID();
-    }
     const result = editing !== null
       ? await db.from("products").update(row).eq("id", editing).select("id")
       : await db.from("products").insert(row).select("id");

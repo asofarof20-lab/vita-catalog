@@ -1,270 +1,64 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>VITA — Редактор</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#fbf7e9"><title>VITA — Товары</title>
 <style>
-:root{color-scheme:light}
-*{box-sizing:border-box}
-body{font:16px Arial,sans-serif;background:#f8f5ed;color:#234734;margin:0;padding:18px}
-main{max-width:700px;margin:auto}
-section,.item{background:#fff;padding:16px;margin:12px 0;border-radius:12px;box-shadow:0 2px 8px #2347340d}
-input,textarea,button{display:block;width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;font:inherit}
-textarea{min-height:100px;resize:vertical}
-button{background:#24563e;color:#fff;border:0;cursor:pointer}
-button:disabled{opacity:.6;cursor:wait}
-button.secondary{background:#68766d}
-button.danger{background:#9e3434}
-.hidden{display:none!important}
-.photo-list{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0}.photo-entry{width:130px;padding:8px;border:1px solid #ddd;border-radius:9px}.photo-entry img{width:112px;height:112px;object-fit:contain;background:#f8f5ed;border-radius:6px;margin:0 auto 6px}.photo-entry button{padding:7px;margin:4px 0;font-size:13px}.photo-help{font-size:13px;color:#68766d}
-.item p{overflow-wrap:anywhere}
-#message,#status{overflow-wrap:anywhere}
+:root{color-scheme:light;--green:#24563e;--dark:#183d2b;--cream:#fbf7e9;--line:#e7dfc8}
+*{box-sizing:border-box}body{margin:0;padding:14px;background:var(--cream);color:#202820;font:16px/1.45 Arial,sans-serif}
+main{max-width:760px;margin:auto}h1{font-size:25px;color:var(--dark)}h2{font-size:20px;color:var(--dark)}
+section,.item{background:#fffdf7;border:1px solid var(--line);border-radius:15px;padding:15px;margin:12px 0;box-shadow:0 3px 12px #2347340c}
+label{display:block;margin:12px 0 5px;font-weight:700;color:var(--dark)}
+input,button{width:100%;min-height:46px;padding:11px 12px;border:1px solid #d9dfcf;border-radius:10px;font:inherit}
+button{background:var(--green);color:white;border:0;font-weight:700;cursor:pointer;margin:7px 0}
+button:disabled{opacity:.55}button.secondary{background:#68766d}button.danger{background:#a23838}
+.hidden{display:none!important}.row{display:flex;gap:8px}.row>*{flex:1;min-width:0}
+.help,#status,#message{font-size:14px;color:#59695a;overflow-wrap:anywhere}
+.item{display:flex;align-items:center;justify-content:space-between;gap:12px}.item p{margin:3px 0;color:#68766d;font-size:14px}.item-actions{display:flex;gap:6px;min-width:116px}.item-actions button{padding:8px 5px;font-size:13px}
+.photo-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0}
+.photo-entry{min-width:0;padding:7px;border:1px solid var(--line);border-radius:10px}
+.photo-entry img{width:100%;aspect-ratio:1;object-fit:contain;background:#f5f2e7;border-radius:7px}
+.photo-entry button{font-size:12px;padding:7px 3px;min-height:38px}
+@media(max-width:430px){body{padding:9px}.item{align-items:flex-start;flex-direction:column}.item-actions{width:100%}.photo-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-</head>
-<body>
-<main>
-<h2>VITA — Редактор товаров</h2>
-<section id="login">
-<form id="loginForm">
-<input id="email" type="email" autocomplete="username" placeholder="Электронная почта" required>
-<input id="password" type="password" autocomplete="current-password" placeholder="Пароль" required>
-<button id="loginBtn" type="submit">Войти</button>
-</form>
-<p id="message" role="status" aria-live="polite">Запуск редактора...</p>
-</section>
-<div id="app" class="hidden">
-<button id="logout" type="button" class="secondary">Выйти</button>
-<section>
-<h3 id="formTitle">Добавить товар</h3>
-<form id="productForm">
-<label for="name">Название товара *</label>
-<input id="name" maxlength="200" required placeholder="Название товара">
-<label for="variant">Вариант</label>
-<input id="variant" maxlength="200" placeholder="Вариант">
-<label for="price">Цена *</label>
-<input id="price" type="number" min="0" step="0.01" required placeholder="Цена">
-<label for="pack">Упаковка</label>
-<input id="pack" maxlength="200" placeholder="Упаковка">
-<label for="category">Категория</label>
-<input id="category" maxlength="200" placeholder="Категория">
-<label for="note">Описание</label>
-<textarea id="note" maxlength="5000" placeholder="Описание"></textarea>
-<label for="photo">Фотографии (можно выбрать несколько; JPEG, PNG или WebP; до 5 МБ каждая)</label>
-<input id="photo" type="file" accept="image/jpeg,image/png,image/webp" multiple>
-<p class="photo-help">При редактировании старые фото сохраняются. Удали ненужные кнопкой под фото.</p>
+</head><body><main>
+<h1>VITA — Редактор товаров</h1>
+<section id="login"><form id="loginForm">
+<label for="email">Электронная почта</label><input id="email" type="email" autocomplete="username" required>
+<label for="password">Пароль</label><input id="password" type="password" autocomplete="current-password" required>
+<button id="loginBtn">Войти</button></form><p id="message" role="status">Запуск редактора…</p></section>
+<div id="app" class="hidden"><button id="logout" class="secondary" type="button">Выйти</button>
+<section><h2 id="formTitle">Добавить товар</h2><form id="productForm">
+<label for="code">Код товара *</label><input id="code" maxlength="120" required placeholder="Например: bd 45.42.403">
+<label for="name">Название товара *</label><input id="name" maxlength="200" required>
+<label for="price">Цена *</label><input id="price" type="number" min="0" step="0.01" inputmode="decimal" required>
+<label for="photo">Фотографии (можно выбрать несколько)</label><input id="photo" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+<p class="help">Фото автоматически уменьшаются перед загрузкой. Можно убрать старые и добавить новые.</p>
 <div id="formPhotos" class="photo-list"></div>
-<button id="save" type="submit">Сохранить товар</button>
-<button id="cancel" type="button" class="secondary">Отменить редактирование</button>
-</form>
-<p id="status" role="status" aria-live="polite"></p>
-</section>
-<h3>Товары</h3>
-<button id="refresh" type="button">Обновить список</button>
-<div id="products" aria-live="polite"></div>
-</div>
-</main>
+<div class="row"><button id="save" type="submit">Сохранить</button><button id="cancel" class="secondary" type="button">Отмена</button></div>
+</form><p id="status" role="status" aria-live="polite"></p></section>
+<h2>Список товаров</h2><button id="refresh" type="button">Обновить список</button><div id="products"></div><button id="more" class="secondary hidden" type="button">Загрузить ещё</button>
+</div></main>
 <script>
-(function(){
-"use strict";
-const $ = id => document.getElementById(id);
-const say = (id, text) => { $(id).textContent = text; };
-const URL_DB = "https://yedkbzasynqitvbavwwd.supabase.co";
-const KEY = "sb_publishable_lV5KW7THtDzy-SN9GTrHLg_z7AFMqUP";
-const BUCKET = "product-images";
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
-let db, items = [], editing = null, saving = false, keptImages = [];
-
-function show(session){
-  $("login").classList.toggle("hidden", !!session);
-  $("app").classList.toggle("hidden", !session);
-  if(session) load();
-}
-
-async function login(event){
-  event.preventDefault();
-  const email = $("email").value.trim();
-  const password = $("password").value;
-  if(!email || !password){ say("message", "Введи электронную почту и пароль."); return; }
-  $("loginBtn").disabled = true;
-  say("message", "Выполняется вход...");
-  try{
-    const {data, error} = await db.auth.signInWithPassword({email, password});
-    if(error) throw error;
-    show(data.session);
-    say("message", "");
-  }catch(e){
-    say("message", "Ошибка входа: " + (e.message || "Неизвестная ошибка"));
-  }finally{ $("loginBtn").disabled = false; }
-}
-
-async function load(){
-  $("refresh").disabled = true;
-  $("products").textContent = "Загрузка товаров...";
-  try{
-    const {data, error} = await db.from("products").select("*").order("name");
-    if(error) throw error;
-    items = data || [];
-    $("products").replaceChildren();
-    if(!items.length){ say("products", "Товаров нет."); return; }
-
-    for(const p of items){
-      const card = document.createElement("div"); card.className = "item";
-      const title = document.createElement("b"); title.textContent = p.name || "Без названия";
-      const info = document.createElement("p"); info.textContent = "Цена: " + (p.price ?? "—");
-      card.append(title, info);
-      if(p.variant){ const el = document.createElement("p"); el.textContent = "Вариант: " + p.variant; card.append(el); }
-      if(p.category){ const el = document.createElement("p"); el.textContent = "Категория: " + p.category; card.append(el); }
-      const paths = Array.isArray(p.images) && p.images.length ? p.images : (p.image_url ? [p.image_url] : []);
-      for(const path of paths){
-        const img = document.createElement("img"); img.alt = "Фото: " + (p.name || "товара"); img.loading = "lazy"; card.append(img);
-        try{ const {data,error} = await db.storage.from(BUCKET).createSignedUrl(path,3600); if(!error && data?.signedUrl) img.src=data.signedUrl; else img.alt="Не удалось загрузить фото"; }
-        catch(_){ img.alt="Не удалось загрузить фото"; }
-      }
-      const edit = document.createElement("button");
-      edit.type = "button"; edit.textContent = "Изменить"; edit.onclick = () => editItem(p);
-      const del = document.createElement("button");
-      del.type = "button"; del.className = "danger"; del.textContent = "Удалить"; del.onclick = () => removeItem(p);
-      card.append(edit, del); $("products").append(card);
-    }
-  }catch(e){
-    $("products").textContent = "Ошибка загрузки: " + (e.message || "Неизвестная ошибка");
-  }finally{ $("refresh").disabled = false; }
-}
-
-function editItem(p){
-  editing = p.id;
-  ["name","variant","price","pack","category","note"].forEach(k => { $(k).value = p[k] ?? ""; });
-  $("photo").value = "";
-  keptImages = Array.isArray(p.images) && p.images.length ? [...p.images] : (p.image_url ? [p.image_url] : []);
-  renderFormPhotos();
-  $("formTitle").textContent = "Изменить товар";
-  say("status", "Редактирование товара. Если новое фото не выбрано, старое фото сохранится.");
-  $("name").focus();
-  window.scrollTo({top:0, behavior:"smooth"});
-}
-
-async function renderFormPhotos(){
-  const host=$("formPhotos"); if(!host)return; host.replaceChildren();
-  for(const path of keptImages){
-    const box=document.createElement("div"); box.className="photo-entry";
-    const img=document.createElement("img"); img.alt="Фото товара";
-    try{const {data,error}=await db.storage.from(BUCKET).createSignedUrl(path,3600); if(!error&&data?.signedUrl)img.src=data.signedUrl;}catch(_){}
-    const del=document.createElement("button"); del.type="button"; del.className="danger"; del.textContent="Убрать фото";
-    del.onclick=()=>{keptImages=keptImages.filter(x=>x!==path);renderFormPhotos();};
-    box.append(img,del); host.append(box);
-  }
-}
-
-function clearForm(){
-  editing = null;
-  keptImages = [];
-  $("productForm").reset();
-  renderFormPhotos();
-  $("formTitle").textContent = "Добавить товар";
-  say("status", "");
-}
-
-async function save(event){
-  event.preventDefault();
-  if(saving) return;
-  const name = $("name").value.trim();
-  const rawPrice = $("price").value.trim();
-  const price = Number(rawPrice);
-  if(!name){ say("status", "Укажи название товара."); $("name").focus(); return; }
-  if(rawPrice === "" || !Number.isFinite(price) || price < 0){
-    say("status", "Укажи правильную цену — число не меньше нуля."); $("price").focus(); return;
-  }
-  const row = {
-    name, price,
-    variant: $("variant").value.trim() || null,
-    pack: $("pack").value.trim() || null,
-    category: $("category").value.trim() || null,
-    note: $("note").value.trim() || null
-  };
-  const files = Array.from($("photo").files || []);
-  for(const file of files){
-    if(file.size > MAX_FILE_SIZE){ say("status", "Фото «"+file.name+"» больше 5 МБ."); return; }
-    if(!["image/jpeg","image/png","image/webp"].includes(file.type)){ say("status", "Неверный формат фото: "+file.name); return; }
-  }
-  saving = true; $("save").disabled = true; $("cancel").disabled = true;
-  say("status", "Сохранение товара...");
-  try{
-    const uploaded=[];
-    for(const file of files){
-      const ext=file.type==="image/jpeg"?"jpg":file.type==="image/png"?"png":"webp";
-      if(!window.crypto || typeof window.crypto.randomUUID!=="function") throw new Error("Открой страницу через HTTPS для загрузки фото.");
-      const path=window.crypto.randomUUID()+"."+ext;
-      const {data:uploadData,error:uploadError}=await db.storage.from(BUCKET).upload(path,file,{contentType:file.type,upsert:false});
-      if(uploadError) throw uploadError;
-      uploaded.push(uploadData.path);
-    }
-    row.images = [...keptImages, ...uploaded];
-    row.image_url = row.images[0] || null;
-    // The products.id column is TEXT and has no database default.
-    // Keep existing IDs unchanged when editing; generate a unique text ID for new products.
-    if(editing === null){
-      if(!window.crypto || typeof window.crypto.randomUUID !== "function"){
-        throw new Error("Не удалось автоматически создать код товара. Открой админ-панель через HTTPS.");
-      }
-      row.id = window.crypto.randomUUID();
-    }
-    const result = editing !== null
-      ? await db.from("products").update(row).eq("id", editing).select("id")
-      : await db.from("products").insert(row).select("id");
-    if(result.error) throw result.error;
-    if(!result.data || result.data.length === 0){
-      throw new Error("Изменение не подтверждено. Проверь права доступа RLS в Supabase.");
-    }
-    clearForm();
-    say("status", "Товар успешно сохранён.");
-    await load();
-  }catch(e){
-    say("status", "Ошибка: " + (e.message || "Неизвестная ошибка"));
-  }finally{ saving = false; $("save").disabled = false; $("cancel").disabled = false; }
-}
-
-async function removeItem(p){
-  if(!confirm("Удалить товар «" + (p.name || "Без названия") + "»?")) return;
-  try{
-    const {data, error} = await db.from("products").delete().eq("id", p.id).select("id");
-    if(error) throw error;
-    if(!data || data.length === 0) throw new Error("Товар не удалён. Проверь права доступа RLS в Supabase.");
-    if(editing === p.id) clearForm();
-    say("status", "Товар удалён.");
-    await load();
-  }catch(e){ alert("Ошибка удаления: " + (e.message || "Неизвестная ошибка")); }
-}
-
-async function start(){
-  if(!window.supabase){
-    say("message", "Ошибка: библиотека Supabase не загрузилась. Проверь подключение к интернету.");
-    return;
-  }
-  try{
-    db = window.supabase.createClient(URL_DB, KEY);
-    $("loginForm").addEventListener("submit", login);
-    $("logout").addEventListener("click", async () => {
-      try{
-        const {error} = await db.auth.signOut();
-        if(error) throw error;
-        clearForm(); show(null); say("message", "Ты вышел из аккаунта.");
-      }catch(e){ say("status", "Ошибка выхода: " + (e.message || "Неизвестная ошибка")); }
-    });
-    $("productForm").addEventListener("submit", save);
-    $("photo").addEventListener("change",()=>{const count=$("photo").files.length;say("status",count?"Выбрано новых фото: "+count:"");});
-    $("cancel").addEventListener("click", clearForm);
-    $("refresh").addEventListener("click", load);
-    const {data, error} = await db.auth.getSession();
-    if(error) throw error;
-    show(data.session);
-    if(!data.session) say("message", "Введи почту и пароль.");
-  }catch(e){ say("message", "Ошибка запуска: " + (e.message || "Неизвестная ошибка")); }
-}
-if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
-else start();
+(()=>{'use strict';
+const $=id=>document.getElementById(id), say=(id,t)=>$(id).textContent=t;
+const URL_DB="https://yedkbzasynqitvbavwwd.supabase.co", KEY="sb_publishable_lV5KW7THtDzy-SN9GTrHLg_z7AFMqUP", BUCKET="product-images";
+const PAGE=40, MAX=5*1024*1024;let db,items=[],offset=0,editing=null,oldImages=[],keptImages=[],saving=false;
+const paths=p=>Array.isArray(p.images)&&p.images.length?p.images:(p.image_url?[p.image_url]:[]);
+async function removeUnreferenced(candidates){const {data,error}=await db.from('products').select('images,image_url');if(error)throw error;const used=new Set();for(const p of data||[])for(const path of paths(p))used.add(path);const removable=candidates.filter(path=>!/^https?:\/\//i.test(path)&&!used.has(path));if(removable.length){const {error:removeError}=await db.storage.from(BUCKET).remove(removable);if(removeError)throw removeError}return removable.length}
+function show(session){$('login').classList.toggle('hidden',!!session);$('app').classList.toggle('hidden',!session);if(session)load(true)}
+async function login(e){e.preventDefault();$('loginBtn').disabled=true;say('message','Выполняется вход…');try{const {data,error}=await db.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error)throw error;show(data.session);say('message','')}catch(e){say('message','Ошибка входа: '+e.message)}finally{$('loginBtn').disabled=false}}
+async function signed(path){if(/^https?:\/\//i.test(path))return path;const {data,error}=await db.storage.from(BUCKET).createSignedUrl(path,3600);if(!error&&data?.signedUrl)return data.signedUrl;const pub=db.storage.from(BUCKET).getPublicUrl(path);return pub.data?.publicUrl||''}
+async function load(reset=false){if(reset){offset=0;items=[];$('products').replaceChildren()}$('refresh').disabled=true;$('more').disabled=true;try{const {data,error}=await db.from('products').select('id,name,price,images,image_url').order('name').range(offset,offset+PAGE-1);if(error)throw error;const batch=data||[];items=reset?batch:[...items,...batch];offset+=batch.length;renderList();$('more').classList.toggle('hidden',batch.length<PAGE)}catch(e){$('products').textContent='Ошибка загрузки: '+e.message}finally{$('refresh').disabled=false;$('more').disabled=false}}
+function renderList(){const host=$('products');host.replaceChildren();if(!items.length){host.textContent='Товаров пока нет.';return}for(const p of items){const card=document.createElement('div');card.className='item';const info=document.createElement('div');const b=document.createElement('b');b.textContent=p.name||'Без названия';const detail=document.createElement('p');detail.textContent='Код: '+p.id+' · Цена: '+p.price;info.append(b,detail);const actions=document.createElement('div');actions.className='item-actions';const edit=document.createElement('button');edit.type='button';edit.textContent='Изменить';edit.onclick=()=>editItem(p);const del=document.createElement('button');del.type='button';del.className='danger';del.textContent='Удалить';del.onclick=()=>removeItem(p);actions.append(edit,del);card.append(info,actions);host.append(card)}}
+async function renderPhotos(){const host=$('formPhotos');host.replaceChildren();for(const path of keptImages){const box=document.createElement('div');box.className='photo-entry';const img=document.createElement('img');img.alt='Фото товара';img.loading='lazy';signed(path).then(url=>{if(url)img.src=url});const btn=document.createElement('button');btn.type='button';btn.className='danger';btn.textContent='Убрать';btn.onclick=()=>{keptImages=keptImages.filter(x=>x!==path);renderPhotos()};box.append(img,btn);host.append(box)}}
+function editItem(p){editing=p.id;oldImages=paths(p);keptImages=[...oldImages];$('code').value=p.id;$('code').readOnly=true;$('name').value=p.name||'';$('price').value=p.price??'';$('photo').value='';$('formTitle').textContent='Изменить товар';say('status','Код существующего товара сохранён без изменений.');renderPhotos();window.scrollTo({top:0,behavior:'smooth'})}
+function clearForm(){$('productForm').reset();editing=null;oldImages=[];keptImages=[];$('code').readOnly=false;$('formTitle').textContent='Добавить товар';$('formPhotos').replaceChildren();say('status','')}
+async function compress(file){if(file.size>MAX)throw new Error('Фото '+file.name+' больше 5 МБ.');if(!('createImageBitmap'in window))return file;let bitmap;try{bitmap=await createImageBitmap(file)}catch(_){return file}const scale=Math.min(1,1600/Math.max(bitmap.width,bitmap.height));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close?.();const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',.82));if(!blob)return file;return new File([blob],(file.name.replace(/\.[^.]+$/,'')||'photo')+'.webp',{type:'image/webp'})}
+async function save(e){e.preventDefault();if(saving)return;const code=$('code').value.trim(),name=$('name').value.trim(),priceText=$('price').value.trim(),price=Number(priceText);if(!code||!name||priceText===''||!Number.isFinite(price)||price<0){say('status','Проверь код, название и цену.');return}const files=Array.from($('photo').files||[]);if(files.some(f=>!['image/jpeg','image/png','image/webp'].includes(f.type))){say('status','Разрешены только JPEG, PNG и WebP.');return}saving=true;$('save').disabled=$('cancel').disabled=true;say('status','Сжимаю и сохраняю…');const uploaded=[];try{for(const original of files){const file=await compress(original);const ext=file.type==='image/webp'?'webp':file.type==='image/png'?'png':'jpg';const path=crypto.randomUUID()+'.'+ext;const {data,error}=await db.storage.from(BUCKET).upload(path,file,{contentType:file.type,upsert:false});if(error)throw error;uploaded.push(data.path)}const images=[...keptImages,...uploaded];const row={id:code,name,price,images,image_url:images[0]||null};const result=editing!==null?await db.from('products').update(row).eq('id',editing).select('id'):await db.from('products').insert(row).select('id');if(result.error)throw result.error;if(!result.data?.length)throw new Error('Запись не подтверждена. Проверь права доступа RLS.');const removed=oldImages.filter(x=>!images.includes(x));if(removed.length){try{await removeUnreferenced(removed)}catch(cleanupError){say('status','Товар сохранён, но часть старых фото не удалось очистить: '+cleanupError.message)}}clearForm();say('status','Товар сохранён.');await load(true)}catch(e){if(uploaded.length)await db.storage.from(BUCKET).remove(uploaded);say('status','Ошибка: '+(e.message||'Неизвестная ошибка'))}finally{saving=false;$('save').disabled=$('cancel').disabled=false}}
+async function removeItem(p){if(!confirm('Удалить товар «'+p.name+'» и его фотографии?'))return;try{const {data,error}=await db.from('products').delete().eq('id',p.id).select('id');if(error)throw error;if(!data?.length)throw new Error('Товар не удалён. Проверь RLS.');const photos=paths(p);if(photos.length){try{await removeUnreferenced(photos)}catch(storageError){alert('Товар удалён, но часть фотографий осталась в хранилище: '+storageError.message)}}if(editing===p.id)clearForm();say('status','Товар удалён.');await load(true)}catch(e){alert('Ошибка удаления: '+e.message)}}
+async function start(){if(!window.supabase){say('message','Не загрузилась библиотека Supabase.');return}try{db=window.supabase.createClient(URL_DB,KEY);$('loginForm').addEventListener('submit',login);$('productForm').addEventListener('submit',save);$('cancel').onclick=clearForm;$('refresh').onclick=()=>load(true);$('more').onclick=()=>load(false);$('logout').onclick=async()=>{await db.auth.signOut();clearForm();show(null);say('message','Вы вышли из аккаунта.')};const {data,error}=await db.auth.getSession();if(error)throw error;show(data.session);if(!data.session)say('message','Введи почту и пароль.')}catch(e){say('message','Ошибка запуска: '+e.message)}}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
-</script>
-</body>
-</html>
+</script></body></html>

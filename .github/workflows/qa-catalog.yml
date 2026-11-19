@@ -1,0 +1,35 @@
+name: VITA Catalog QA
+on:
+  push:
+    branches: [ test/vita-catalog-integration-2026-11-19 ]
+    paths:
+      - 'index.html'
+      - '.github/workflows/qa-catalog.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  static-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate inline JavaScript and order flow
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const scripts = [...html.matchAll(/<script(?:\\s[^>]*)?>([\\s\\S]*?)<\\/script>/gi)].map(x => x[1]).filter(x => x.trim());
+          if (!scripts.length) throw new Error('No inline scripts found');
+          scripts.forEach((source, i) => { try { new Function(source); } catch (e) { throw new Error('Inline script ' + i + ': ' + e.message); } });
+          for (const id of ['sendButton','orderStatus','comment','products','cartItems']) {
+            if (!html.includes('id="' + id + '"')) throw new Error('Missing required element: ' + id);
+          }
+          for (const token of ['vita-catalog-orders','action:\'order\'','action:\'stock\'','result.orderNumber','Склад:']) {
+            if (!html.includes(token)) throw new Error('Missing order/stock flow token: ' + token);
+          }
+          if (html.includes('wa.me/') || html.includes('id="shop"') || html.includes('id="phone"')) throw new Error('Legacy WhatsApp/store/phone checkout still present');
+          console.log('Catalog static QA passed');
+          NODE

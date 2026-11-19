@@ -23,7 +23,7 @@ jobs:
           const fs = require('fs');
           for (const file of ['index.html', 'admin.html']) {
             const html = fs.readFileSync(file, 'utf8');
-            const matches = [...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/gi)];
+            const matches = [...html.matchAll(/<script>([\s\S]*?)<\/script>/gi)];
             if (!matches.length) throw new Error('No inline script found in ' + file);
             matches.forEach((match, i) => fs.writeFileSync('/tmp/' + file + '.' + i + '.js', match[1]));
           }

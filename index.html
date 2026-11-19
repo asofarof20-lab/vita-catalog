@@ -269,9 +269,15 @@ async function loadProducts(){
   results.textContent='Загружаем товары из базы данных…';
   container.innerHTML='<p class="empty">Подключаемся к каталогу…</p>';
   try{
-    const {data,error}=await supabaseClient.from('products').select('*').order('name');
-    if(error) throw error;
-    products=await Promise.all((data||[]).map(async p=>{
+    let allProducts=[],from=0;
+    while(from<50000){
+      const {data,error}=await supabaseClient.from('products').select('*').order('name').order('id').range(from,from+999);
+      if(error) throw error;
+      const batch=data||[];allProducts=allProducts.concat(batch);
+      if(batch.length<1000)break;
+      from+=1000;
+    }
+    products=await Promise.all(allProducts.map(async p=>{
       const item={...p};
       let paths = Array.isArray(item.images) ? item.images.filter(Boolean) : [];
       if(!paths.length && item.image_url) paths = [item.image_url];

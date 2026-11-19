@@ -256,7 +256,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_lV5KW7THtDzy-SN9GTrHLg_z7AFMqUP";
 const IMAGE_BUCKET = "product-images";
 const STOCK_SUPABASE_URL = "https://btxmlgdmdvmtijmgfhhg.supabase.co";
 const STOCK_SUPABASE_KEY = "sb_publishable_Bn5HFGp4ESlKqT_mfZ7ttA_cpaIPAUm";
-const stockClient = window.supabase.createClient(STOCK_SUPABASE_URL, STOCK_SUPABASE_KEY);
+const stockClient = window.supabase.createClient(STOCK_SUPABASE_URL, STOCK_SUPABASE_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
 let stockByCode = new Map(), stockLoaded = false, stockLoadError = false;
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const categories=[['Все товары','✦'],['Уборка','🧽'],['Стирка','🫧'],['Косметика','🧴'],['Личная гигиена','♡'],['Для дома','⌂'],['Сладости','🍬'],['Прочее','⋯'],['Акция','★']];

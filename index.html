@@ -304,9 +304,15 @@ async function loadProducts(){
 }
 async function loadStock(){
   try{
-    const {data,error}=await stockClient.rpc('vita_public_stock');
-    if(error) throw error;
-    stockByCode=new Map((data||[]).map(x=>[String(x.product_code),Number(x.quantity)]));
+    let all=[],from=0;
+    while(from<50000){
+      const {data,error}=await stockClient.rpc('vita_public_stock').range(from,from+999);
+      if(error)throw error;
+      const batch=data||[];all=all.concat(batch);
+      if(batch.length<1000)break;
+      from+=1000;
+    }
+    stockByCode=new Map(all.map(x=>[String(x.product_code),Number(x.quantity)]));
     stockLoaded=true;stockLoadError=false;renderProducts();
   }catch(error){
     stockLoaded=false;stockLoadError=true;

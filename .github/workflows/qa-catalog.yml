@@ -4,6 +4,7 @@ on:
     branches: [ test/vita-catalog-integration-2026-11-19 ]
     paths:
       - 'index.html'
+      - 'admin.html'
       - '.github/workflows/qa-catalog.yml'
   workflow_dispatch:
 permissions:
@@ -31,5 +32,7 @@ jobs:
             if (!html.includes(token)) throw new Error('Missing order/stock flow token: ' + token);
           }
           if (html.includes('wa.me/') || html.includes('id="shop"') || html.includes('id="phone"')) throw new Error('Legacy WhatsApp/store/phone checkout still present');
-          console.log('Catalog static QA passed');
+          const admin = fs.readFileSync('admin.html', 'utf8');
+          for (const token of ['optimizeProductImage','cacheControl:"31536000"','image/webp']) if (!admin.includes(token)) throw new Error('Missing image optimization: ' + token);
+          console.log('Catalog and admin static QA passed');
           NODE

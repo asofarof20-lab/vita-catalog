@@ -350,17 +350,17 @@ document.getElementById('sendButton').addEventListener('click',async()=>{
  button.disabled=true;button.textContent='Сохраняем заказ…';
  const payload=items.map(p=>({product_code:String(p.id),product_name:String(p.name),quantity:Number(cart[p.key]),unit_price:Number(p.price)||0}));
  let total=0;
- let message='🛍 ЗАКАЗ VITA\\n\\n🏪 Магазин: '+shop+'\\n📞 Телефон: '+phone+'\\n\\nСОСТАВ ЗАКАЗА:\\n';
- items.forEach(p=>{const q=Number(cart[p.key]),sum=q*Number(p.price||0);total+=sum;message+='• '+p.name+' (код '+p.id+')\\n  '+q+' шт. × '+money(p.price)+' = '+money(sum)+'\\n'});
- message+='\\nИТОГО: '+money(total);
- if(comment)message+='\\n\\nКомментарий: '+comment;
+ let message='🛍 ЗАКАЗ VITA\n\n🏪 Магазин: '+shop+'\n📞 Телефон: '+phone+'\n\nСОСТАВ ЗАКАЗА:\n';
+ items.forEach(p=>{const q=Number(cart[p.key]),sum=q*Number(p.price||0);total+=sum;message+='• '+p.name+' (код '+p.id+')\n  '+q+' шт. × '+money(p.price)+' = '+money(sum)+'\n'});
+ message+='\nИТОГО: '+money(total);
+ if(comment)message+='\n\nКомментарий: '+comment;
  try{
   const {data,error}=await stockClient.rpc('vita_public_submit_catalog_order',{
    p_shop_name:shop,p_phone:phone,p_items:payload,p_comment:comment||null
   });
   if(error)throw error;
   if(!data||!data.order_id)throw new Error('Сервер не вернул номер заявки');
-  message+='\\n\\nНомер заявки VITANET: '+(data.order_number||data.order_id);
+  message+='\n\nНомер заявки VITANET: '+(data.order_number||data.order_id);
   button.textContent='Открываем WhatsApp…';
   location.href='https://wa.me/'+WHATSAPP_NUMBER+'?text='+encodeURIComponent(message);
  }catch(error){

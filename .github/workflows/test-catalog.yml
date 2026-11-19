@@ -1,0 +1,34 @@
+name: VITA Catalog test checks
+on:
+  push:
+    branches:
+      - test/catalog-cleanup-2026-11-19
+  pull_request:
+    branches:
+      - main
+      - test/catalog-cleanup-2026-11-19
+permissions:
+  contents: read
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Extract inline scripts
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          for (const file of ['index.html', 'admin.html']) {
+            const html = fs.readFileSync(file, 'utf8');
+            const matches = [...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/gi)];
+            if (!matches.length) throw new Error('No inline script found in ' + file);
+            matches.forEach((match, i) => fs.writeFileSync('/tmp/' + file + '.' + i + '.js', match[1]));
+          }
+          NODE
+      - name: Check JavaScript syntax
+        run: |
+          node --check /tmp/index.html.0.js
+          node --check /tmp/admin.html.0.js

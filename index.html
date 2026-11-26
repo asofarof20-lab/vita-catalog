@@ -344,15 +344,26 @@ document.getElementById('sendButton').addEventListener('click',async()=>{
  if(!items.length){alert('Сначала добавьте товары в корзину.');return}
  const shop=document.getElementById('shop').value.trim();
  const phone=document.getElementById('phone').value.trim();
- const locationText=document.getElementById('location').value.trim();
+ const enteredLocation=document.getElementById('location').value.trim();
  const paymentType=document.getElementById('paymentType').value;
  const comment=document.getElementById('comment').value.trim();
- if(!shop||!phone||!locationText){alert('Введите название магазина, номер телефона и местоположение.');return}
+ if(!shop||!phone||!enteredLocation){alert('Введите название магазина, номер телефона и местоположение.');return}
  const button=document.getElementById('sendButton');
- button.disabled=true;button.textContent='Сохраняем заказ…';
+ button.disabled=true;button.textContent='Получаем геолокацию…';
+ let gpsText='';
+ if(navigator.geolocation){
+  try{
+   const position=await new Promise((resolve,reject)=>navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:true,timeout:12000,maximumAge:0}));
+   const lat=position.coords.latitude.toFixed(6),lon=position.coords.longitude.toFixed(6);
+   gpsText='https://www.google.com/maps?q='+lat+','+lon;
+  }catch(geoError){
+   console.warn('VITA geolocation unavailable:',geoError?.message||geoError);
+  }
+ }
+ const locationText=enteredLocation+(gpsText?' | GPS: '+gpsText:'');
  const payload=items.map(p=>({product_code:String(p.id),product_name:String(p.name),quantity:Number(cart[p.key]),unit_price:Number(p.price)||0}));
  let total=0;
- let message='🛍 ЗАКАЗ VITA\n\n🏪 Магазин: '+shop+'\n📞 Телефон: '+phone+'\n📍 Местоположение: '+locationText+'\n💳 Оплата: '+(paymentType==='cash'?'Наличными':'В долг')+'\n\nСОСТАВ ЗАКАЗА:\n';
+ let message='🛍 ЗАКАЗ VITA\n\n🏪 Магазин: '+shop+'\n📞 Телефон: '+phone+'\n📍 Местоположение: '+enteredLocation+(gpsText?'\n🗺 Геолокация: '+gpsText:'\n🗺 Геолокация: не получена — указано вручную')+'\n💳 Оплата: '+(paymentType==='cash'?'Наличными':'В долг')+'\n\nСОСТАВ ЗАКАЗА:\n';
  items.forEach(p=>{const q=Number(cart[p.key]),sum=q*Number(p.price||0);total+=sum;message+='• '+p.name+' (код '+p.id+')\n  '+q+' шт. × '+money(p.price)+' = '+money(sum)+'\n'});
  message+='\nИТОГО: '+money(total);
  if(comment)message+='\n\nКомментарий: '+comment;

@@ -385,11 +385,9 @@ document.getElementById('sendButton').addEventListener('click',async()=>{
  const comment=document.getElementById('comment').value.trim();
  if(!shop||!phone||!enteredLocation){alert('Введите название магазина, номер телефона и местоположение.');return}
  const button=document.getElementById('sendButton');
- button.disabled=true;button.textContent='Проверяем геолокацию…';
- if(!capturedGpsText){
-  const ok=await captureGPS();
-  if(!ok){button.disabled=false;button.textContent='Отправить заказ';alert('Для отправки заказа нужно разрешить доступ к геолокации и повторить попытку.');return;}
- }
+ button.disabled=true;button.textContent='Отправляем заказ…';
+ // GPS is optional: the manually entered shop location is enough to submit an order.
+ // Include coordinates only when the user has already granted location access.
  const gpsText=capturedGpsText;
  const locationText=enteredLocation+(gpsText?' | GPS: '+gpsText:'');
  const payload=items.map(p=>({product_code:String(p.id),product_name:String(p.name),quantity:Number(cart[p.key]),unit_price:Number(p.price)||0}));
